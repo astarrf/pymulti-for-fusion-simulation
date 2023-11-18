@@ -25,7 +25,7 @@ class BayesOptimizer():
         os.system(f'source {self.bashrc_path}')  # 执行source命令，加载bashrc配置
         os.system('echo $MULTI')  # 打印环境变量MULTI的值
 
-    def run(self, dimensions: list, delta: float = 1e-3, print_step: bool = False, n_calls: int = 5000, random_state: int = 0):
+    def run(self, dimensions: list, delta: float = 1e-3, print_step: bool = False, n_calls: int = 5000, random_state = 0):
         """
         运行Bayes优化器。
 
