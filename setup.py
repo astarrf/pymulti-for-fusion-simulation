@@ -10,6 +10,7 @@ setup(
         'shutil',
         'subprocess',
         're>=2.2.1',
-        'warnings'
+        'warnings',
+        'skopt>=0.9.0',
     ],
 )

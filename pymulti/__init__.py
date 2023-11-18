@@ -5,6 +5,7 @@ import shutil
 import subprocess
 import re
 import warnings
+import skopt
 from . import CaseIO
 
 VERSION = '0.1.0'
