@@ -5,6 +5,6 @@ import shutil
 import subprocess
 import re
 import warnings
-from . import files
+from . import CaseIO
 
 VERSION = '0.1.0'
