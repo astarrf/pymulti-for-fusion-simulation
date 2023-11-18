@@ -9,8 +9,9 @@ setup(
         'os',
         'shutil',
         'subprocess',
-        're>=2.2.1',
+        're',
         'warnings',
-        'skopt>=0.9.0',
+        'skopt',
+        'numpy',
     ],
 )
