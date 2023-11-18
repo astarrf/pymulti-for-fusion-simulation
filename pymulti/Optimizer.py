@@ -39,14 +39,12 @@ class BayesOptimizer():
         返回：
         - res: 优化结果
         """
-        # 定义参数的范围
-        dimensions = [(-10.0, 10.0)]
         # 定义回调函数，每次迭代后打印结果
         def onstep(res):
             print("最新尝试的参数：", res.x)
             print("最新尝试的函数值：", res.fun)
         # 定义回调函数，当函数值的改变小于0.01时停止优化
-        delta_stop = skopt.callbacks.DeltaYStopper(delta=0.01)
+        delta_stop = skopt.callbacks.DeltaYStopper(delta)
         if print_step:
             res = skopt.gp_minimize(self.__bofunc_, dimensions, n_calls=n_calls, callback=[onstep, delta_stop], random_state=random_state)
         else:
