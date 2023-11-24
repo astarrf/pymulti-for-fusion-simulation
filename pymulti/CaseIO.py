@@ -5,6 +5,7 @@ from . import subprocess
 from . import re
 from enum import Enum
 from . import warnings
+import struct
 
 def merge_feature(list1:list,list2:list):
     """
@@ -73,8 +74,36 @@ class Cases():
         p=subprocess.run(runorder+' && ./RUN', shell = True)
         return p#返回进程对象，用于等待进程结束
 
-    def data_get(self):
-        """
-        读取数据
-        """
-        pass
+    def __data_Struct_(self,filename):
+        # here filename should be ***.d
+        with open(filename,'r') as file:
+            dataStr=file.read()
+            dataLst=dataStr.split()
+            dataLst=dataLst[1:] # remove the first useless item
+            
+            dataTable = [[dataLst[i], int(dataLst[i+1]), int(dataLst[i+2])] for i in range(0, len(dataLst), 3)]
+            # resize the list to 3xN and convert strings into integers
+            # print(dataTable)
+            return dataTable
+        
+    def __data_Input_(self,filename):
+        # return all data from ***, here filename = *** should be a number (time)
+        dataLst=[]
+        with open(filename,'rb') as dataSet:
+            float_bytes = dataSet.read(4)
+            while float_bytes:
+                float_value = struct.unpack('f', float_bytes)[0]
+                # print(float_value)
+                float_bytes = dataSet.read(4)
+                dataLst.append(float_value)
+        return dataLst[1:]
+
+    def data_tag_get(self,filename,tag):
+        # get part of data in ***, here filename = *** should be a number (time), and tag should be a string (eg "cn")
+        dataStructure=self.__data_Struct_(filename+".d")
+        dataSet=self.__data_Input_(filename)
+        for item in dataStructure:
+            # print(item[0],item[1],item[2])
+            if item[0]==tag:
+                dataSelected=dataSet[item[1]-1:item[1]-1+item[2]]
+        return dataSelected

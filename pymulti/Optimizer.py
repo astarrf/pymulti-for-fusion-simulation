@@ -6,7 +6,7 @@ import numpy as np
 from . import CaseIO as io  # 假设这里是相对导入
 
 class BayesOptimizer():
-    def __init__(self, test_name: str, bashrc_path: str, CaseDir: str, source_path: str,features: list, func):
+    def __init__(self, test_name: str, bashrc_path: str, CaseDir: str, source_path: str,file_name:str,tag:str,features: list, func):
         """
         Bayes优化器的初始化函数。
 
@@ -16,6 +16,8 @@ class BayesOptimizer():
         - features: 特征列表
         - CaseDir: 案例目录
         - source_path: 源代码路径
+        - file_name: 读取优化标准的文件路径
+        - tag: 读取优化标准的标签
         - func: 目标函数
         """
         self.test_name = test_name
@@ -23,6 +25,8 @@ class BayesOptimizer():
         self.features = features
         self.CaseDir = CaseDir
         self.source_path = source_path
+        self.file_name=file_name
+        self.tag=tag
         self.func = func
         try:
             os.system(f'source {self.bashrc_path}')  # 执行source命令，加载bashrc配置
@@ -74,7 +78,7 @@ class BayesOptimizer():
         case = io.Cases(self.CaseDir, self.source_path, target_path, replace_list)
         case_p = case.run()
         case_p.wait()
-        data = case.data_get()
+        data = case.data_tag_get(self.file_name,self.tag)
         reward = self.func(data)
         return reward
 

@@ -7,5 +7,6 @@ import re
 import warnings
 import skopt
 from enum import Enum
+import struct
 
 VERSION = '0.1.0'
