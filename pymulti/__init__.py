@@ -6,6 +6,6 @@ import subprocess
 import re
 import warnings
 import skopt
-from . import CaseIO
+from enum import Enum
 
 VERSION = '0.1.0'

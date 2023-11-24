@@ -2,6 +2,7 @@ from . import os
 from . import shutil
 from . import subprocess
 from . import re
+from enum import Enum
 from . import warnings
 
 def merge_feature(list1:list,list2:list):
@@ -11,6 +12,11 @@ def merge_feature(list1:list,list2:list):
     if len(list1)==len(list2):
         return [[list1[i],list2[i]] for i in range(len(list1))]
     raise ValueError('list1和list2的长度应当相等')
+
+class Multi_Program(Enum):
+    multi_1d="multi_1d"
+    multi_2d="multi_2d"
+    multi_3d="multi_3d"
 
 class Cases():
     def __init__(self,CaseDir:str,source_path:str,target_path:str,replace_list=None,file_path='/User.r'):
