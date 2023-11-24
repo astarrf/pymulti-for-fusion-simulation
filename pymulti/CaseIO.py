@@ -1,3 +1,4 @@
+# 导入库的方法：import pymulti.CaseIO
 from . import os
 from . import shutil
 from . import subprocess

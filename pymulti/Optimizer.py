@@ -1,4 +1,5 @@
 # 导入必要的库
+# 导入库的方法：import pymulti.BayesOptimizer
 import os
 import skopt
 import numpy as np
@@ -23,7 +24,10 @@ class BayesOptimizer():
         self.CaseDir = CaseDir
         self.source_path = source_path
         self.func = func
-        os.system(f'source {self.bashrc_path}')  # 执行source命令，加载bashrc配置
+        try:
+            os.system(f'source {self.bashrc_path}')  # 执行source命令，加载bashrc配置
+        except Exception as e:
+            pass
         os.system('echo $MULTI')  # 打印环境变量MULTI的值
 
     def run(self, dimensions: list, delta: float = 1e-3, print_step: bool = False, n_calls: int = 5000, random_state = 0):
