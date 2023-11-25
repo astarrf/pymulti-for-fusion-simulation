@@ -1,5 +1,4 @@
 from setuptools import setup
-import os
 setup(
     name='pymulti',
     version='0.1.0',
@@ -13,5 +12,7 @@ setup(
         'warnings',
         'skopt',
         'numpy',
+        'enum',
+        'struct',
     ],
 )

@@ -21,12 +21,21 @@ class Multi_Program(Enum):
     multi_3d="multi_3d"
 
 class Cases():
-    def __init__(self,CaseDir:str,source_path:str,target_path:str,replace_list=None,file_path='/User.r'):
+    def __init__(self,CaseDir:str,source_path:str,target_path:str,replace_list=None,file_path='/User.r',rep_virable=False):
+        """
+        feature如果多次出现,开启rep_virable后将会全部替换
+        否则可以使用$符号来区分不同的feature
+        如对于同一个feature可以使用'feature$0','feature$1'来区分,
+        并且如果多于或者少于实际出现的次数，将会按照较少的次数进行替换
+        """
         self.CaseDir=CaseDir#运行cases文件夹
         self.source_path=source_path#复制父本路径
         self.target_path=target_path#复制子本路径
         self.file_path=file_path#修改文件路径，通常为默认值
-        self.replace_list=replace_list#需要修改的值，二维列表，如[[feature,new_val],...]
+        self.replace_list=replace_list#需要修改的值，二维列表，如[[feature,new_val],...][]
+        self.feature_num_list={}#需要修改的值的行号，二维列表，如[[feature,line1,line2],...]
+        self.content=None#文件内容
+        self.rep_virable=rep_virable#是否需要全部替换重复变量名
 
     def __mkdir_(self):
         if not os.path.exists(self.target_path):
@@ -40,6 +49,29 @@ class Cases():
             #continue
         shutil.copytree(self.source_path, self.target_path)
 
+    def __get_feature_name_(self):
+        for rl in self.self.replace_list:
+            temp_f=rl[0]
+            feature=temp_f if temp_f.find('$')==-1 else temp_f[:temp_f.find('$')]
+            if not feature in self.feature_num_list:
+                self.feature_num_list[feature]=[]
+        self.feature_num_list=[[fl] for fl in self.feature_num_list]
+
+    def __get_config_(self):
+        #读取文件内容
+        with open(self.file_path, "r", encoding="utf-8") as f:
+            self.content=f.readlines()
+        for i,line in enumerate(self.content):
+            for fl in self.feature_num_list:
+                if re.findall(f'{str(fl[0])}.*?=.*?;',line):
+                    self.feature_num_list[fl].append(i)
+                    break
+
+    def __write_config_(self):
+        #写入文件内容
+        with open(self.file_path, "w", encoding="utf-8") as f:
+            f.writelines(self.content)
+
     def __update_feature_(self,feature:str,new_val:str):
         """
         替换文件中的字符串
@@ -47,24 +79,29 @@ class Cases():
         :param feature:需要替换的变量名
         :param new_val:新的变量值,必须为字符串
         """
-        file=self.file_path
-        with open(file, "r", encoding="utf-8") as f:
-            content=f.readlines()
-            replaced_content=re.sub(f'{str(feature)}.*?=.*?;',f"{str(feature)} = {str(new_val)};",content)
-        with open(file,"w",encoding="utf-8") as f:
-            f.write(replaced_content)
-        if content==replaced_content:
-            warnings.warn(f'未找到{str(feature)},请检查{file}')
+        feature=feature if feature.find('$')==-1 else feature[:feature.find('$')]
+        if not self.rep_virable:
+            index=0 if feature.find('$')==-1 else int(feature[feature.find('$')+1:])
+            list=self.feature_num_list[feature]
+            if len(list)<=index:
+                line_num=list[index] 
+                self.content[line_num]=re.sub(f'{str(feature)}.*?=.*?;',f"{str(feature)} = {str(new_val)};",self.content[line_num])
+        else:
+            for line_num in self.feature_num_list[feature]:
+                self.content[line_num]=re.sub(f'{str(feature)}.*?=.*?;',f"{str(feature)} = {str(new_val)};",self.content[line_num])
 
     def new_case(self):
         #生成新case
         self.__mkdir_()
+        self.__get_feature_name_()
+        self.__get_config_()
         for r_list in self.replace_list:
             if type(r_list)==list and len(r_list)==2:
                 feature,new_val=r_list
                 self.__update_feature_(feature,new_val)
             else:
                 raise ValueError('replace_list应当是二维列表，如[[feature,new_val],...]')
+        self.__write_config_()
 
     def run(self):
         """
