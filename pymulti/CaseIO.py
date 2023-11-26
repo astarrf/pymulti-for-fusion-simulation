@@ -18,7 +18,7 @@ def merge_feature(list1: list, list2: list):
 
 
 class Cases():
-    def __init__(self, CaseDir: str, source_path: str, target_path: str, replace_list=None, file_path='/User.r', rep_virable=False):
+    def __init__(self, CaseDir: str, source_path: str, target_path: str, replace_list=None, file_path='/User.r'):
         """
         feature如果多次出现,开启rep_virable后将会全部替换
         否则可以使用$符号来区分不同的feature
@@ -34,7 +34,6 @@ class Cases():
         # 需要修改的值的行号，二维列表，如[[feature,line1,line2],...]
         self.feature_num_list = {}
         self.content = None  # 文件内容
-        self.rep_virable = rep_virable  # 是否需要全部替换重复变量名
 
     def __mkdir_(self):
         if not os.path.exists(self.target_path):
@@ -87,7 +86,8 @@ class Cases():
         """
         feature = feature if feature.find(
             '$') == -1 else feature[:feature.find('$')]
-        if not self.rep_virable:
+        do_replace = False if feature.find('$') == -1 else True
+        if do_replace:
             index = 0 if feature.find(
                 '$') == -1 else int(feature[feature.find('$')+1:])
             list = self.feature_num_list[feature]
