@@ -164,6 +164,7 @@ class Cases():
 
     def __tri2node_(self, tn, Tn):
         # tri2node function
+        # @author: kglize
         # Tn: triangle node table
         # tn: table of triangle-node connectivity
         nt = tn.shape[0]  # number of triangles
@@ -184,6 +185,7 @@ class Cases():
         return Quant / count
 
     def __node2tri_(self, tn, Tn):
+        # @author: kglize
         # Tn: triangle node table
         # tn: table of triangle-node connectivity
         nt = tn.shape[0]  # number of triangles
@@ -197,6 +199,7 @@ class Cases():
         return Tc
 
     def getTimeTable(self):
+        # @author: kglize
         if self.program == Multi_Program.multi_1d:
             directory = self.target_path
         elif self.program == Multi_Program.multi_2d:
@@ -216,6 +219,7 @@ class Cases():
 
     def getData(self):
         # open description file to get data structure of file MF02
+        # @author: kglize
         if self.program == Multi_Program.multi_1d:
             directory = self.target_path
         elif self.program == Multi_Program.multi_2d:
@@ -323,6 +327,7 @@ class Cases():
 
     def plotRhoTP(self):
         # plotRhoTP function
+        # @author: kglize
         # set end time
         if self.program == Multi_Program.multi_1d:
             directory = self.target_path
