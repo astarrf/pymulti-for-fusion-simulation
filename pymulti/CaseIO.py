@@ -217,12 +217,41 @@ class Cases():
         time = np.sort(stime)
         return time
 
-    def get_data_T(self, time, i, tn, nt, directory):
+    def get_tn(self):
+        if self.program == Multi_Program.multi_1d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_2d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_3d:
+            directory = self.target_path+"_3DM"
+
+        fp01 = open(directory + '/0.d', 'r')
+        mf01 = np.loadtxt(fp01, dtype={'names': (
+            'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
+        spt = mf01['start'][0]
+        lpt = mf01['length'][0]
+        sct = mf01['start'][1]
+        lct = mf01['length'][1]
+        # open file MF02 to get data
+        fp02 = open(directory + '/0', 'rb')
+        mf02 = np.fromfile(fp02, dtype=np.float32)
+        mf02 = np.delete(mf02, 0)  # delete first element, i.e, MF02
+        pt = mf02[spt:spt + lpt]  # table of triangle-node connectivity
+        # arrange the connectivity of triangles in the required matrix form
+        nt = lct  # number of triangles
+        tn = np.zeros((nt, 3), dtype=np.int32)  # connectivity table
+        for i in range(nt):
+            tn[i, 0] = pt[3 * i]
+            tn[i, 1] = pt[3 * i + 1]
+            tn[i, 2] = pt[3 * i + 2]
+        return nt, tn
+
+    def get_data_T(self, time, tn, nt, directory):
         """
         get the data at time[i] and rearrange the data into the triangle form
         """
         # open description file to get data structure of file MF02
-        fp1 = open(directory + '/' + f'{time[i]:g}' + '.d', 'r')
+        fp1 = open(directory + '/' + f'{time:g}' + '.d', 'r')
         mf1 = np.loadtxt(fp1, dtype={'names': (
             'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
         # mf1 = np.genfromtxt(fp1, dtype = ['U10', 'i4', 'i4'], names = ('name', 'start', 'length'), skip_header=1)
@@ -254,10 +283,10 @@ class Cases():
                 lPxray = mf1['length'][j]
 
         # off set start point when time>0
-        istart = (time[i] > 0) * 4 * nt * 0
+        istart = (time > 0) * 4 * nt * 0
 
         # open file MF02 to get data
-        fp2 = open(directory + '/' + f'{time[i]:g}', 'rb')
+        fp2 = open(directory + '/' + f'{time:g}', 'rb')
         mf2 = np.fromfile(fp2, dtype=np.float32)
         mf2 = np.delete(mf2, 0)  # delete first element, i.e, MF02
 
@@ -282,6 +311,7 @@ class Cases():
     def getData(self):
         # open description file to get data structure of file MF02
         # @author: kglize
+
         if self.program == Multi_Program.multi_1d:
             directory = self.target_path
         elif self.program == Multi_Program.multi_2d:
@@ -289,29 +319,7 @@ class Cases():
         elif self.program == Multi_Program.multi_3d:
             directory = self.target_path+"_3DM"
 
-        fp01 = open(directory + '/0.d', 'r')
-        mf01 = np.loadtxt(fp01, dtype={'names': (
-            'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
-
-        # read data structure in file MF02
-        spt = mf01['start'][0]
-        lpt = mf01['length'][0]
-        sct = mf01['start'][1]
-        lct = mf01['length'][1]
-
-        # open file MF02 to get data
-        fp02 = open(directory + '/0', 'rb')
-        mf02 = np.fromfile(fp02, dtype=np.float32)
-        mf02 = np.delete(mf02, 0)  # delete first element, i.e, MF02
-        pt = mf02[spt:spt + lpt]  # table of triangle-node connectivity
-
-        # arrange the connectivity of triangles in the required matrix form
-        nt = lct  # number of triangles
-        tn = np.zeros((nt, 3), dtype=np.int32)  # connectivity table
-        for i in range(nt):
-            tn[i, 0] = pt[3 * i]
-            tn[i, 1] = pt[3 * i + 1]
-            tn[i, 2] = pt[3 * i + 2]
+        nt, tn = self.get_tn()  # get triangle-node connectivity
 
         # get data at different time
         time = self.getTimeTable()
@@ -320,10 +328,9 @@ class Cases():
         rhomax = np.zeros(nTime)
         Pmax = np.zeros(nTime)
         Tmax = np.zeros(nTime)
-
         for i in range(nTime):
             rn, frac1n, rhoDT, Tc, Pc, xc, yc, x, y, rho, P, T, frac1 = self.get_data_T(
-                time, i, tn, nt, directory)
+                time[i], tn, nt, directory)
             # find the max density and the corresponding temperature
             rhoind = 0.98 * np.max(rhoDT * (xc > yc))
             mindex = np.where(rhoDT * (xc > yc) > rhoind)[0][0]
@@ -331,7 +338,6 @@ class Cases():
             Tmax[i] = Tc[mindex]
             Pmax[i] = P[mindex]
             print(i)
-
         return rhomax, Tmax, Pmax, time
 
     def plotRhoTP(self):
