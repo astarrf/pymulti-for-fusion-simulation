@@ -92,7 +92,7 @@ class Traverser():
         - features: 特征列表
         - CaseDir: 案例目录
         - source_path: 源代码路径
-        - traverse_list: 遍历列表
+        - traverse_list: 遍历列表:[[feature1,[val1_1,val2_1,...]],[feature2,[val1_2,val2_2,...]],...]
         """
         self.test_name = test_name
         self.bashrc_path = bashrc_path
@@ -105,7 +105,7 @@ class Traverser():
     def __traverse_list_reshape_(self, list_2d: list):
         """
         将二维列表转换为遍历列表,输出一个变量表和一个二维遍历表
-        [[feature1,[val1_1,val2_1,...]],[feature2,[val1_2,val2_2,...]],...]-->[[val1_1,val1_2,...],[val1_1,val2_2,...],...]
+        [[feature1,[val1_1,val2_1,...]],[feature2,numpy.array],...]-->[[val1_1,val1_2,...],[val1_1,val2_2,...],...]
         """
         param_ranges = [list_2d[i][1] for i in range(len(list_2d))]
         param_features = [list_2d[i][0] for i in range(len(list_2d))]
