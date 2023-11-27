@@ -3,8 +3,8 @@ from . import os
 from . import shutil
 from . import subprocess
 from . import re
-from enum import Enum
 from . import warnings
+from . import Multi_Program
 import struct
 
 
@@ -18,17 +18,18 @@ def merge_feature(list1: list, list2: list):
 
 
 class Cases():
-    def __init__(self, CaseDir: str, source_path: str, target_path: str, replace_list=None, file_path='/User.r'):
+    def __init__(self, program: str, CaseDir: str, source_path: str, target_path: str, replace_list=None, file_path='/User.r'):
         """
         feature如果多次出现,开启rep_virable后将会全部替换
         否则可以使用$符号来区分不同的feature
         如对于同一个feature可以使用'feature$0','feature$1'来区分,
         并且如果多于或者少于实际出现的次数，将会按照较少的次数进行替换
         """
+        self.program = program  # 程序
         self.CaseDir = CaseDir  # 运行cases文件夹
-        self.source_path = source_path  # 复制父本路径
-        self.target_path = target_path  # 复制子本路径
-        self.file_path = file_path  # 修改文件路径，通常为默认值
+        self.source_path = self.CaseDir+source_path  # 复制父本路径
+        self.target_path = self.CaseDir+target_path  # 复制子本路径
+        self.file_path = self.target_path+file_path  # 修改文件路径，通常为默认值
         # 需要修改的值，二维列表，如[[feature,new_val],...][]
         self.replace_list = replace_list
         # 需要修改的值的行号，二维列表，如[[feature,line1,line2],...]
@@ -146,10 +147,15 @@ class Cases():
 
     def data_tag_get(self, filename, tag):
         # get part of data in ***, here filename = *** should be a number (time), and tag should be a string (eg "cn")
+        if self.program == Multi_Program.multi_1d:
+            pass
+        elif self.program == Multi_Program.multi_2d:
+            filename = self.target_path+"/"+filename
+        elif self.program == Multi_Program.multi_3d:
+            filename = self.target_path+"_3DM/"+filename
         dataStructure = self.__data_Struct_(filename+".d")
         dataSet = self.__data_Input_(filename)
         for item in dataStructure:
-            # print(item[0],item[1],item[2])
             if item[0] == tag:
                 dataSelected = dataSet[item[1]-1:item[1]-1+item[2]]
         return dataSelected
