@@ -217,6 +217,68 @@ class Cases():
         time = np.sort(stime)
         return time
 
+    def get_data_T(self, time, i, tn, nt, directory):
+        """
+        get the data at time[i] and rearrange the data into the triangle form
+        """
+        # open description file to get data structure of file MF02
+        fp1 = open(directory + '/' + f'{time[i]:g}' + '.d', 'r')
+        mf1 = np.loadtxt(fp1, dtype={'names': (
+            'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
+        # mf1 = np.genfromtxt(fp1, dtype = ['U10', 'i4', 'i4'], names = ('name', 'start', 'length'), skip_header=1)
+
+        for j in range(len(mf1)):
+            if mf1['name'][j] == 'x':
+                sx = mf1['start'][j]
+                lx = mf1['length'][j]
+            elif mf1['name'][j] == 'y':
+                sy = mf1['start'][j]
+                ly = mf1['length'][j]
+            elif mf1['name'][j] == 'rho':
+                srho = mf1['start'][j]
+                lrho = mf1['length'][j]
+            elif mf1['name'][j] == 'P':
+                sP = mf1['start'][j]
+                lP = mf1['length'][j]
+            elif mf1['name'][j] == 'T':
+                sT = mf1['start'][j]
+                lT = mf1['length'][j]
+            elif mf1['name'][j] == 'TR':
+                sTR = mf1['start'][j]
+                lTR = mf1['length'][j]
+            elif mf1['name'][j] == 'frac1':
+                sfrac1 = mf1['start'][j]
+                lfrac1 = mf1['length'][j]
+            elif mf1['name'][j] == 'xraypower':
+                sPxray = mf1['start'][j]
+                lPxray = mf1['length'][j]
+
+        # off set start point when time>0
+        istart = (time[i] > 0) * 4 * nt * 0
+
+        # open file MF02 to get data
+        fp2 = open(directory + '/' + f'{time[i]:g}', 'rb')
+        mf2 = np.fromfile(fp2, dtype=np.float32)
+        mf2 = np.delete(mf2, 0)  # delete first element, i.e, MF02
+
+        x = mf2[sx - istart - 1:sx - istart + lx - 1] * 1e4  # x coordinate
+        y = mf2[sy - istart - 1:sy - istart + ly - 1] * 1e4  # y coordinate
+        rho = mf2[srho - istart - 1:srho - istart + lrho - 1]  # density
+        P = mf2[sP - istart - 1:sP - istart + lP - 1]  # pressure
+        T = mf2[sT - istart - 1:sT - istart + lT - 1]  # temperature
+        frac1 = mf2[sfrac1 - istart - 1:sfrac1 -
+                    istart + lfrac1 - 1]  # fraction of phase 1
+
+        # rearrange data
+        rn = np.sqrt(x ** 2 + y ** 2)
+        frac1n = self.__tri2node_(tn, frac1)
+        rhoDT = rho * frac1
+        Tc = self.__node2tri_(tn, T)
+        Pc = self.__node2tri_(tn, P)
+        xc = self.__node2tri_(tn, x)
+        yc = self.__node2tri_(tn, y)
+        return rn, frac1n, rhoDT, Tc, Pc, xc, yc, x, y, rho, P, T, frac1
+
     def getData(self):
         # open description file to get data structure of file MF02
         # @author: kglize
@@ -226,6 +288,7 @@ class Cases():
             directory = self.target_path
         elif self.program == Multi_Program.multi_3d:
             directory = self.target_path+"_3DM"
+
         fp01 = open(directory + '/0.d', 'r')
         mf01 = np.loadtxt(fp01, dtype={'names': (
             'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
@@ -259,62 +322,8 @@ class Cases():
         Tmax = np.zeros(nTime)
 
         for i in range(nTime):
-            # open description file to get data structure of file MF02
-            fp1 = open(directory + '/' + f'{time[i]:g}' + '.d', 'r')
-            mf1 = np.loadtxt(fp1, dtype={'names': (
-                'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
-            # mf1 = np.genfromtxt(fp1, dtype = ['U10', 'i4', 'i4'], names = ('name', 'start', 'length'), skip_header=1)
-
-            for j in range(len(mf1)):
-                if mf1['name'][j] == 'x':
-                    sx = mf1['start'][j]
-                    lx = mf1['length'][j]
-                elif mf1['name'][j] == 'y':
-                    sy = mf1['start'][j]
-                    ly = mf1['length'][j]
-                elif mf1['name'][j] == 'rho':
-                    srho = mf1['start'][j]
-                    lrho = mf1['length'][j]
-                elif mf1['name'][j] == 'P':
-                    sP = mf1['start'][j]
-                    lP = mf1['length'][j]
-                elif mf1['name'][j] == 'T':
-                    sT = mf1['start'][j]
-                    lT = mf1['length'][j]
-                elif mf1['name'][j] == 'TR':
-                    sTR = mf1['start'][j]
-                    lTR = mf1['length'][j]
-                elif mf1['name'][j] == 'frac1':
-                    sfrac1 = mf1['start'][j]
-                    lfrac1 = mf1['length'][j]
-                elif mf1['name'][j] == 'xraypower':
-                    sPxray = mf1['start'][j]
-                    lPxray = mf1['length'][j]
-
-            # off set start point when time>0
-            istart = (time[i] > 0) * 4 * nt * 0
-
-            # open file MF02 to get data
-            fp2 = open(directory + '/' + f'{time[i]:g}', 'rb')
-            mf2 = np.fromfile(fp2, dtype=np.float32)
-            mf2 = np.delete(mf2, 0)  # delete first element, i.e, MF02
-
-            x = mf2[sx - istart - 1:sx - istart + lx - 1] * 1e4  # x coordinate
-            y = mf2[sy - istart - 1:sy - istart + ly - 1] * 1e4  # y coordinate
-            rho = mf2[srho - istart - 1:srho - istart + lrho - 1]  # density
-            P = mf2[sP - istart - 1:sP - istart + lP - 1]  # pressure
-            T = mf2[sT - istart - 1:sT - istart + lT - 1]  # temperature
-            frac1 = mf2[sfrac1 - istart - 1:sfrac1 -
-                        istart + lfrac1 - 1]  # fraction of phase 1
-
-            # rearrange data
-            rn = np.sqrt(x ** 2 + y ** 2)
-            frac1n = self.__tri2node_(tn, frac1)
-            rhoDT = rho * frac1
-            Tc = self.__node2tri_(tn, T)
-            xc = self.__node2tri_(tn, x)
-            yc = self.__node2tri_(tn, y)
-
+            rn, frac1n, rhoDT, Tc, Pc, xc, yc, x, y, rho, P, T, frac1 = self.get_data_T(
+                time, i, tn, nt, directory)
             # find the max density and the corresponding temperature
             rhoind = 0.98 * np.max(rhoDT * (xc > yc))
             mindex = np.where(rhoDT * (xc > yc) > rhoind)[0][0]
