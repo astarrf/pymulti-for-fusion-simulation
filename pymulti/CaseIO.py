@@ -6,6 +6,9 @@ from . import re
 from . import warnings
 from . import Multi_Program
 import struct
+import numpy as np
+import glob
+import matplotlib.pyplot as plt
 
 
 def merge_feature(list1: list, list2: list):
@@ -130,7 +133,6 @@ class Cases():
             dataTable = [[dataLst[i], int(dataLst[i+1]), int(dataLst[i+2])]
                          for i in range(0, len(dataLst), 3)]
             # resize the list to 3xN and convert strings into integers
-            # print(dataTable)
             return dataTable
 
     def __data_Input_(self, filename):
@@ -159,3 +161,186 @@ class Cases():
             if item[0] == tag:
                 dataSelected = dataSet[item[1]-1:item[1]-1+item[2]]
         return dataSelected
+
+    def __tri2node_(self, tn, Tn):
+        # tri2node function
+        # Tn: triangle node table
+        # tn: table of triangle-node connectivity
+        nt = tn.shape[0]  # number of triangles
+        npx = max(max(tn[:, 0]), max(tn[:, 1]),
+                  max(tn[:, 2]))  # number of nodes
+        # count the number of triangles that a node belongs to
+        count = np.zeros(npx)
+        # store the number of triangles that a node belongs to
+        Quant = np.zeros(npx)
+
+        # loop on all triangles to accumulate counts and quantities of a node
+        for i in range(nt):
+            for j in range(3):
+                n = tn[i, j]
+                count[n - 1] += 1
+                Quant[n - 1] += Tn[i]
+
+        return Quant / count
+
+    def __node2tri_(self, tn, Tn):
+        # Tn: triangle node table
+        # tn: table of triangle-node connectivity
+        nt = tn.shape[0]  # number of triangles
+        # store the number of triangles that a node belongs to
+        Tc = np.zeros(nt, dtype=np.int32)
+
+        # loop on all triangles to accumulate counts and quantities of a node
+        for i in range(nt):
+            Tc[i] = (Tn[tn[i, 0] - 1] + Tn[tn[i, 1] - 1] + Tn[tn[i, 2] - 1]) / 3
+
+        return Tc
+
+    def getTimeTable(self):
+        if self.program == Multi_Program.multi_1d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_2d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_3d:
+            directory = self.target_path+"_3DM"
+        # get time table in the directory
+        files = glob.glob(directory + '/*.d')
+        filenames = [os.path.basename(x) for x in files]
+        stime = np.zeros(len(filenames))
+        for i in range(len(filenames)):
+            a = filenames[i]
+            length = len(a)
+            stime[i] = float(a[0:length - 2])
+        time = np.sort(stime)
+        return time
+
+    def getData(self):
+        # open description file to get data structure of file MF02
+        if self.program == Multi_Program.multi_1d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_2d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_3d:
+            directory = self.target_path+"_3DM"
+        fp01 = open(directory + '/0.d', 'r')
+        mf01 = np.loadtxt(fp01, dtype={'names': (
+            'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
+
+        # read data structure in file MF02
+        spt = mf01['start'][0]
+        lpt = mf01['length'][0]
+        sct = mf01['start'][1]
+        lct = mf01['length'][1]
+
+        # open file MF02 to get data
+        fp02 = open(directory + '/0', 'rb')
+        mf02 = np.fromfile(fp02, dtype=np.float32)
+        mf02 = np.delete(mf02, 0)  # delete first element, i.e, MF02
+        pt = mf02[spt:spt + lpt]  # table of triangle-node connectivity
+
+        # arrange the connectivity of triangles in the required matrix form
+        nt = lct  # number of triangles
+        tn = np.zeros((nt, 3), dtype=np.int32)  # connectivity table
+        for i in range(nt):
+            tn[i, 0] = pt[3 * i]
+            tn[i, 1] = pt[3 * i + 1]
+            tn[i, 2] = pt[3 * i + 2]
+
+        # get data at different time
+        time = self.getTimeTable()
+        nTime = len(time)
+
+        rhomax = np.zeros(nTime)
+        Pmax = np.zeros(nTime)
+        Tmax = np.zeros(nTime)
+
+        for i in range(nTime):
+            # open description file to get data structure of file MF02
+            fp1 = open(directory + '/' + f'{time[i]:g}' + '.d', 'r')
+            mf1 = np.loadtxt(fp1, dtype={'names': (
+                'name', 'start', 'length'), 'formats': ('U10', 'i4', 'i4')}, skiprows=1)
+            # mf1 = np.genfromtxt(fp1, dtype = ['U10', 'i4', 'i4'], names = ('name', 'start', 'length'), skip_header=1)
+
+            for j in range(len(mf1)):
+                if mf1['name'][j] == 'x':
+                    sx = mf1['start'][j]
+                    lx = mf1['length'][j]
+                elif mf1['name'][j] == 'y':
+                    sy = mf1['start'][j]
+                    ly = mf1['length'][j]
+                elif mf1['name'][j] == 'rho':
+                    srho = mf1['start'][j]
+                    lrho = mf1['length'][j]
+                elif mf1['name'][j] == 'P':
+                    sP = mf1['start'][j]
+                    lP = mf1['length'][j]
+                elif mf1['name'][j] == 'T':
+                    sT = mf1['start'][j]
+                    lT = mf1['length'][j]
+                elif mf1['name'][j] == 'TR':
+                    sTR = mf1['start'][j]
+                    lTR = mf1['length'][j]
+                elif mf1['name'][j] == 'frac1':
+                    sfrac1 = mf1['start'][j]
+                    lfrac1 = mf1['length'][j]
+                elif mf1['name'][j] == 'xraypower':
+                    sPxray = mf1['start'][j]
+                    lPxray = mf1['length'][j]
+
+            # off set start point when time>0
+            istart = (time[i] > 0) * 4 * nt * 0
+
+            # open file MF02 to get data
+            fp2 = open(directory + '/' + f'{time[i]:g}', 'rb')
+            mf2 = np.fromfile(fp2, dtype=np.float32)
+            mf2 = np.delete(mf2, 0)  # delete first element, i.e, MF02
+
+            x = mf2[sx - istart - 1:sx - istart + lx - 1] * 1e4  # x coordinate
+            y = mf2[sy - istart - 1:sy - istart + ly - 1] * 1e4  # y coordinate
+            rho = mf2[srho - istart - 1:srho - istart + lrho - 1]  # density
+            P = mf2[sP - istart - 1:sP - istart + lP - 1]  # pressure
+            T = mf2[sT - istart - 1:sT - istart + lT - 1]  # temperature
+            frac1 = mf2[sfrac1 - istart - 1:sfrac1 -
+                        istart + lfrac1 - 1]  # fraction of phase 1
+
+            # rearrange data
+            rn = np.sqrt(x ** 2 + y ** 2)
+            frac1n = self.__tri2node_(tn, frac1)
+            rhoDT = rho * frac1
+            Tc = self.__node2tri_(tn, T)
+            xc = self.__node2tri_(tn, x)
+            yc = self.__node2tri_(tn, y)
+
+            # find the max density and the corresponding temperature
+            rhoind = 0.98 * np.max(rhoDT * (xc > yc))
+            mindex = np.where(rhoDT * (xc > yc) > rhoind)[0][0]
+            rhomax[i] = rhoDT[mindex]
+            Tmax[i] = Tc[mindex]
+            Pmax[i] = P[mindex]
+            print(i)
+
+        return rhomax, Tmax, Pmax, time
+
+    def plotRhoTP(self):
+        # plotRhoTP function
+        # set end time
+        if self.program == Multi_Program.multi_1d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_2d:
+            directory = self.target_path
+        elif self.program == Multi_Program.multi_3d:
+            directory = self.target_path+"_3DM"
+
+        endTime = 0.6e-9
+        rhomax, Tmax, Pmax, time = self.getData(directory)  # get data
+
+        # plot
+        fig, ax = plt.subplots(figsize=(12, 6))
+        mend = np.where(time > endTime)[0][0]
+        TFermi = 14.05 * rhomax ** (2 / 3)
+        ax.plot(rhomax[:mend], Tmax[:mend], 'k-', label='Temperature')
+        ax.plot(rhomax[:mend], TFermi[:mend], 'r-', label='Fermi Temperature')
+        ax.set_xlabel(r'Density(g/cc)')
+        ax.set_ylabel(r'T(eV)')
+        ax.legend()
+        plt.show()
