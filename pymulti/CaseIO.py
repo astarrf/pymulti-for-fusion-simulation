@@ -147,7 +147,7 @@ class Cases():
                 dataLst.append(float_value)
         return dataLst[1:]
 
-    def data_tag_get(self, filename, tag):
+    def get_data_tag(self, filename, tag):
         # get part of data in ***, here filename = *** should be a number (time), and tag should be a string (eg "cn")
         if self.program == Multi_Program.multi_1d:
             pass
