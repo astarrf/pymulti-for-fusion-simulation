@@ -1,3 +1,2 @@
-class BoundaryFind():
-    def __init__(self, data):
-        self.data = data
+def boundary_find(data, cooridate):
+    pass
