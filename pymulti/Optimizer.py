@@ -7,11 +7,12 @@ from . import CaseIO as io  # 假设这里是相对导入
 
 
 class BayesOptimizer():
-    def __init__(self, test_name: str, bashrc_path: str, CaseDir: str, source_path: str, file_name: str, tag: str, features: list, func):
+    def __init__(self, program: str, test_name: str, bashrc_path: str, CaseDir: str, source_path: str, file_name: str, tag: str, features: list, func):
         """
         Bayes优化器的初始化函数。
 
         参数：
+        - program: 选择程序
         - test_name: 测试名称
         - bashrc_path: bashrc文件路径
         - features: 特征列表
@@ -21,6 +22,7 @@ class BayesOptimizer():
         - tag: 读取优化标准的标签
         - func: 目标函数
         """
+        self.program = program
         self.test_name = test_name
         self.bashrc_path = bashrc_path
         self.features = features
@@ -30,7 +32,9 @@ class BayesOptimizer():
         self.tag = tag
         self.func = func
 
-    def run(self, dimensions: list, delta: float = 1e-3, print_step: bool = False, n_calls: int = 5000, random_state=0):
+    def run(self, dimensions: list, delta: float = 1e-3,
+            print_step: bool = False, do_delta_stop: bool = True,
+            n_calls: int = 5000, random_state=0):
         """
         运行Bayes优化器。
 
@@ -50,12 +54,13 @@ class BayesOptimizer():
             print("最新尝试的函数值：", res.fun)
         # 定义回调函数，当函数值的改变小于0.01时停止优化
         delta_stop = skopt.callbacks.DeltaYStopper(delta)
+        callback_list = []
         if print_step:
-            res = skopt.gp_minimize(self.__bofunc_, dimensions, n_calls=n_calls, callback=[
-                                    onstep, delta_stop], random_state=random_state)
-        else:
-            res = skopt.gp_minimize(self.__bofunc_, dimensions, n_calls=n_calls,
-                                    callback=delta_stop, random_state=random_state)
+            callback_list.append(onstep)
+        if do_delta_stop:
+            callback_list.append(delta_stop)
+        res = skopt.gp_minimize(self.__bofunc_, dimensions, n_calls=n_calls,
+                                callback=callback_list, random_state=random_state)
         return res
 
     def __bofunc_(self, x):
@@ -73,11 +78,11 @@ class BayesOptimizer():
         for r_list in replace_list:
             target_path_name += f'_{r_list[0]}{r_list[1]}'
         target_path = os.path.abspath(f'{self.CaseDir}/{self.test_name}_')
-        case = io.Cases(self.CaseDir, self.source_path,
+        case = io.Cases(self.program, self.CaseDir, self.source_path,
                         target_path, replace_list)
         case_p = case.run()
         case_p.wait()
-        reward = self.func(case)
+        reward = self.func(case, self.file_name, self.tag)
         return reward
 
 
