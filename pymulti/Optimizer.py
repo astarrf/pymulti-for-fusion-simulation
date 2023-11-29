@@ -77,8 +77,7 @@ class BayesOptimizer():
                         target_path, replace_list)
         case_p = case.run()
         case_p.wait()
-        data = case.data_tag_get(self.file_name, self.tag)
-        reward = self.func(data)
+        reward = self.func(case)
         return reward
 
 
