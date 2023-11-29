@@ -364,3 +364,9 @@ class Cases():
         ax.set_ylabel(r'T(eV)')
         ax.legend()
         plt.show()
+
+    def get_coordinate(self, filename):
+        x_list = self.get_data_tag(filename, "x")
+        y_list = self.get_data_tag(filename, "y")
+        z_list = self.get_data_tag(filename, "z")
+        return x_list, y_list, z_list
