@@ -87,10 +87,11 @@ class BayesOptimizer():
 
 
 class Traverser():
-    def __init__(self, test_name: str, bashrc_path: str, CaseDir: str, source_path: str, traverse_list: list):
+    def __init__(self, program: str, test_name: str, bashrc_path: str, CaseDir: str, source_path: str, traverse_list: list):
         """
         遍历器的初始化函数。
         参数：
+        - program: 选择程序
         - test_name: 测试名称
         - bashrc_path: bashrc文件路径
         - features: 特征列表
@@ -98,6 +99,7 @@ class Traverser():
         - source_path: 源代码路径
         - traverse_list: 遍历列表:[[feature1,[val1_1,val2_1,...]],[feature2,[val1_2,val2_2,...]],...]
         """
+        self.program = program
         self.test_name = test_name
         self.bashrc_path = bashrc_path
         self.CaseDir = CaseDir
@@ -120,7 +122,7 @@ class Traverser():
 
     def run(self, print_step: bool = False):
         """
-        运行遍历器。保证遍历器同时运行的进程数不超过process_num。
+        运行遍历器。
         """
         for i in range(len(self.feature_range)):
             replace_list = io.merge_feature(
@@ -129,7 +131,7 @@ class Traverser():
             for r_list in replace_list:
                 target_path_name += f'_{r_list[0]}{r_list[1]}'
             target_path = os.path.abspath(f'{self.CaseDir}/{self.test_name}_')
-            case = io.Cases(self.CaseDir, self.source_path,
+            case = io.Cases(self.program, self.CaseDir, self.source_path,
                             target_path, replace_list)
             case_p = case.run()
             # case_p.wait()
