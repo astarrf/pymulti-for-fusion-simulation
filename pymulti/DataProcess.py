@@ -1,6 +1,7 @@
 import CaseIO as io
 import scipy.interpolate
 import numpy as np
+from . import Multi_Program
 
 
 def rho_cell2node(cn_list, rho_list):
@@ -76,6 +77,8 @@ def polar_coordinate_interp(x_list, y_list, z_list, val_list, r_div=125, thetaZ_
 
 
 def get_spherical_nodes(case: io.Cases, filename: str, tag: str = "rho"):
+    if case.program != Multi_Program.multi_3d:
+        raise ValueError("This function is only for Multi-3D")
     x_list, y_list, z_list = case.get_coordinate(filename)
     cn_list = case.get_data_tag("0", "cn")
     val_list = rho_cell2node(cn_list, case.get_data_tag(filename, tag))
@@ -84,7 +87,9 @@ def get_spherical_nodes(case: io.Cases, filename: str, tag: str = "rho"):
     return interp_list, r_list
 
 
-def get_max_sphere_along_r(case: io.Cases, filename: str, tag: str = "rho"):
+def get_max_sphere_along_r_3(case: io.Cases, filename: str, tag: str = "rho"):
+    if case.program != Multi_Program.multi_3d:
+        raise ValueError("This function is only for Multi-3D")
     interp_list, r_list = get_spherical_nodes(case, filename, tag)
     max_arg_list = []
     for i in range(len(interp_list)):
