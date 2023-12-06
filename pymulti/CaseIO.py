@@ -43,7 +43,7 @@ class Cases():
         if not os.path.exists(self.target_path):
             # 如果目标路径不存在原文件夹的话就创建
             os.makedirs(self.target_path)
-        if os.path.exists(self.target_path):
+        else:
             # 如果目标路径存在原文件夹的话就先删除
             warnings.warn(f'{self.target_path} 目标路径已存在，将删除该路径下所有文件')
             shutil.rmtree(self.target_path)
