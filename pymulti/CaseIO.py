@@ -58,13 +58,13 @@ class Cases():
                     'replace_list应当是二维列表，如[[feature,new_val],...]')
 
     def __get_feature_name_(self):
-        for rl in self.self.replace_list:
+        for rl in self.replace_list:
             temp_f = rl[0]
             feature = temp_f if temp_f.find(
                 '$') == -1 else temp_f[:temp_f.find('$')]
             if not feature in self.feature_num_list:
                 self.feature_num_list[feature] = []
-        self.feature_num_list = [[fl] for fl in self.feature_num_list]
+        # self.feature_num_list = [[fl] for fl in self.feature_num_list]
 
     def __get_config_(self):
         # 读取文件内容
@@ -72,7 +72,7 @@ class Cases():
             self.content = f.readlines()
         for i, line in enumerate(self.content):
             for fl in self.feature_num_list:
-                if re.findall(f'{str(fl[0])}.*?=.*?;', line):
+                if re.findall(f'{fl}\s+=.*?;', line):
                     self.feature_num_list[fl].append(i)
                     break
 
@@ -88,21 +88,20 @@ class Cases():
         :param feature:需要替换的变量名
         :param new_val:新的变量值,必须为字符串
         """
-        feature = feature if feature.find(
-            '$') == -1 else feature[:feature.find('$')]
-        do_replace = False if feature.find('$') == -1 else True
+        do_replace = feature.find('$') != -1
         if do_replace:
-            index = 0 if feature.find(
-                '$') == -1 else int(feature[feature.find('$')+1:])
+            ind = feature.find('$')
+            index = int(feature[ind+1:])
+            feature = feature[:feature.find('$')]
             list = self.feature_num_list[feature]
             if len(list) <= index:
                 line_num = list[index]
                 self.content[line_num] = re.sub(
-                    f'{str(feature)}.*?=.*?;', f"{str(feature)} = {str(new_val)};", self.content[line_num])
+                    f'{feature}\s+=.*?;', f"{feature} = {new_val};", self.content[line_num])
         else:
             for line_num in self.feature_num_list[feature]:
                 self.content[line_num] = re.sub(
-                    f'{str(feature)}.*?=.*?;', f"{str(feature)} = {str(new_val)};", self.content[line_num])
+                    f'{feature}\s+=.*?;', f"{feature} = {new_val};", self.content[line_num])
 
     def new_case(self):
         # 生成新case
