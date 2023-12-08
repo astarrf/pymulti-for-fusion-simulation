@@ -42,14 +42,14 @@ class Cases():
     def __mkdir_(self):
         if not os.path.exists(self.target_path):
             # 如果目标路径不存在原文件夹的话就创建
-            os.makedirs(self.target_path)
+            shutil.copytree(self.source_path, self.target_path)
         else:
             # 如果目标路径存在原文件夹的话就先删除
             warnings.warn(f'{self.target_path} 目标路径已存在，将删除该路径下所有文件')
             shutil.rmtree(self.target_path)
+            shutil.copytree(self.source_path, self.target_path)
             # 如果目标路径存在，跳过下面操作，进入下一次循环
             # continue
-        shutil.copytree(self.source_path, self.target_path)
 
     def __precheck_(self):
         for r_list in self.replace_list:
@@ -94,7 +94,7 @@ class Cases():
             index = int(feature[ind+1:])
             feature = feature[:feature.find('$')]
             list = self.feature_num_list[feature]
-            if len(list) <= index:
+            if len(list) > index:
                 line_num = list[index]
                 self.content[line_num] = re.sub(
                     f'{feature}\s+=.*?;', f"{feature} = {new_val};", self.content[line_num])

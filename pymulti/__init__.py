@@ -22,22 +22,25 @@ class Multi_Program(Enum):
     multi_3d = "multi_3d"
 
 
-def init(program: str, bashrc_path: str):
-    try:
-        os.system(f'source {bashrc_path}')  # 执行source命令，加载bashrc配置
-    except Exception as e:
-        if program == Multi_Program.multi_1d:
-            pass
-        elif program == Multi_Program.multi_2d:
-            os.system(
-                'export MULTI=/lustre/home/acct-phydci/phydci-user0/2023ConeAngle/MULTI-2D/')
-            os.system(
-                'export PATH=/lustre/home/acct-phydci/phydci-user0/2023ConeAngle/MULTI-2D/r94/boot-3.1:$PATH')
-        elif program == Multi_Program.multi_3d:
-            os.system(
-                'export MULTI=/lustre/home/acct-phydci/phydci-user0/2023ConeAngle/MULTI-3D/')
-            os.system(
-                'export PATH=/lustre/home/acct-phydci/phydci-user0/2023ConeAngle/MULTI-3D/r94/boot-3.1:$PATH')
+def init_one(program: str, program_path: str = None):
+    if program_path is None:
+        program_path = '/lustre/home/acct-phydci/phydci-user0/2023ConeAngle'
+    if program == Multi_Program.multi_1d:
+        d = 1
+    elif program == Multi_Program.multi_2d:
+        d = 2
+    elif program == Multi_Program.multi_3d:
+        d = 3
+    os.system(f'export MULTI={program_path}/MULTI-{d}D/')
+    os.system(f'export PATH={program_path}/MULTI-{d}D/r94/boot-3.1:$PATH')
 
-    finally:
-        os.system('echo $MULTI')  # 打印环境变量MULTI的值
+
+def init(program: str, bashrc_path: str = None, program_path: str = None):
+    if bashrc_path is None:
+        init_one(program, program_path)
+    else:
+        try:
+            os.system(f'source {bashrc_path}')  # 执行source命令，加载bashrc配置
+        except Exception as e:
+            init_one(program, program_path)
+    os.system('echo $MULTI')  # 打印环境变量MULTI的值
