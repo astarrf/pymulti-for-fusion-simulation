@@ -106,8 +106,10 @@ class Cases():
 
     def new_case(self):
         # 生成新case
-        self.__precheck_()
         self.__mkdir_()
+        if self.replace_list == None:
+            return
+        self.__precheck_()
         self.__get_feature_name_()
         self.__get_config_()
         for r_list in self.replace_list:
