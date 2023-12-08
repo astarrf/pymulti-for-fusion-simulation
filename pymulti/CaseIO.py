@@ -40,16 +40,23 @@ class Cases():
         self.content = None  # 文件内容
 
     def __mkdir_(self):
+        cp = f'cd {self.CaseDir};mkdir {self.target_path} 2>/def/null;cp -p {self.source_path}/{{*.m,*.r,*.txt,RUN,FILELIST,DEPENDENCES}} {self.target_path}'
+        os.system(cp)
+        '''
+        cp_order = f"cp {self.source_path}/*.m {self.target_path}"
         if not os.path.exists(self.target_path):
             # 如果目标路径不存在原文件夹的话就创建
-            shutil.copytree(self.source_path, self.target_path)
+            # shutil.copytree(self.source_path, self.target_path)
+            os.system(f'')
+            os.system(cp_order)
         else:
             # 如果目标路径存在原文件夹的话就先删除
             warnings.warn(f'{self.target_path} 目标路径已存在，将删除该路径下所有文件')
-            shutil.rmtree(self.target_path)
-            shutil.copytree(self.source_path, self.target_path)
-            # 如果目标路径存在，跳过下面操作，进入下一次循环
-            # continue
+            # shutil.rmtree(self.target_path)
+            # shutil.copytree(self.source_path, self.target_path)
+            os.system(f'rm -r {self.target_path}')
+            os.system(cp_order)
+        '''
 
     def __precheck_(self):
         for r_list in self.replace_list:
