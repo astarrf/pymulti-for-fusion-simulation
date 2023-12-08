@@ -34,6 +34,10 @@ def init(program: str, bashrc_path: str):
             os.system(
                 'export PATH=/lustre/home/acct-phydci/phydci-user0/2023ConeAngle/MULTI-2D/r94/boot-3.1:$PATH')
         elif program == Multi_Program.multi_3d:
-            pass
+            os.system(
+                'export MULTI=/lustre/home/acct-phydci/phydci-user0/2023ConeAngle/MULTI-3D/')
+            os.system(
+                'export PATH=/lustre/home/acct-phydci/phydci-user0/2023ConeAngle/MULTI-3D/r94/boot-3.1:$PATH')
+
     finally:
         os.system('echo $MULTI')  # 打印环境变量MULTI的值
