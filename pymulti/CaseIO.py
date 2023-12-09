@@ -33,14 +33,14 @@ class Cases():
         self.source_path = self.CaseDir+source_path  # 复制父本路径
         self.target_path = self.CaseDir+target_path  # 复制子本路径
         self.file_path = self.target_path+file_path  # 修改文件路径，通常为默认值
-        # 需要修改的值，二维列表，如[[feature,new_val],...][]
+        # 需要修改的值，二维列表，如[[feature,new_val],...]
         self.replace_list = replace_list
         # 需要修改的值的行号，二维列表，如[[feature,line1,line2],...]
         self.feature_num_list = {}
         self.content = None  # 文件内容
 
     def __mkdir_(self):
-        cp = f'cd {self.CaseDir};mkdir {self.target_path} 2>/def/null;cp -p {self.source_path}/{{*.m,*.r,*.txt,RUN,FILELIST,DEPENDENCES}} {self.target_path}'
+        cp = f'cd {self.CaseDir};mkdir {self.target_path} 2> /dev/null;cd {self.source_path};cp -p $(cat FILELIST) /{self.target_path}'
         os.system(cp)
         '''
         cp_order = f"cp {self.source_path}/*.m {self.target_path}"
