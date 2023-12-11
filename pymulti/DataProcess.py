@@ -81,7 +81,13 @@ def get_spherical_nodes(case: io.Cases, filename: str, tag: str = "rho"):
         raise ValueError("This function is only for Multi-3D")
     x_list, y_list, z_list = case.get_coordinate(filename)
     cn_list = case.get_data_tag("0", "cn")
-    val_list = rho_cell2node(cn_list, case.get_data_tag(filename, tag))
+    
+    val_list_raw=case.get_data_tag(filename, tag)
+    if len(val_list_raw)==len(x_list): # 转换为跟x_list一样定义在节点上
+        val_list=val_list_raw
+    else:
+        val_list = rho_cell2node(cn_list, val_list_raw)
+    
     interp_list, r_list = polar_coordinate_interp(
         x_list, y_list, z_list, val_list)
     return interp_list, r_list
@@ -91,8 +97,10 @@ def get_max_sphere_along_r_3(case: io.Cases, filename: str, tag: str = "rho"):
     if case.program != Multi_Program.multi_3d:
         raise ValueError("This function is only for Multi-3D")
     interp_list, r_list = get_spherical_nodes(case, filename, tag)
-    max_arg_list = []
+    max_arg_list = [] #存最大值位置的序号
     for i in range(len(interp_list)):
         if not (np.isnan(interp_list[i]).all()):
             max_arg_list.append(np.nanargmax(interp_list[i]))
-    return max_arg_list
+    max_r_list=[r_list[i] for i in max_arg_list] #存最大值位置的半径
+    return max_r_list,max_arg_list
+
