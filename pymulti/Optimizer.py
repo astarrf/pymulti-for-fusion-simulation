@@ -7,14 +7,13 @@ from . import CaseIO as io  # 假设这里是相对导入
 
 
 class BayesOptimizer():
-    def __init__(self, program: str, test_name: str, bashrc_path: str, CaseDir: str, source_path: str, file_name: str, tag: str, features: list, func):
+    def __init__(self, program: str, test_name: str, CaseDir: str, source_path: str, file_name: str, tag: str, features: list, func):
         """
         Bayes优化器的初始化函数。
 
         参数：
         - program: 选择程序
         - test_name: 测试名称
-        - bashrc_path: bashrc文件路径
         - features: 特征列表
         - CaseDir: 案例目录
         - source_path: 源代码路径
@@ -24,7 +23,6 @@ class BayesOptimizer():
         """
         self.program = program
         self.test_name = test_name
-        self.bashrc_path = bashrc_path
         self.features = features
         self.CaseDir = CaseDir
         self.source_path = source_path
@@ -77,7 +75,7 @@ class BayesOptimizer():
         target_path_name = f'{self.CaseDir}/{self.test_name}'
         for r_list in replace_list:
             target_path_name += f'_{r_list[0]}{r_list[1]}'
-        target_path = os.path.abspath(f'{self.CaseDir}/{self.test_name}_')
+        target_path = os.path.abspath(f'{self.CaseDir}/{self.test_name}')
         case = io.Cases(self.program, self.CaseDir, self.source_path,
                         target_path, replace_list)
         case_p = case.run()
