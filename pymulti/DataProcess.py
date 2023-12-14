@@ -104,3 +104,21 @@ def get_max_sphere_along_r_3(case: io.Cases, filename: str, tag: str = "rho"):
     max_r_list=[r_list[i] for i in max_arg_list] #存最大值位置的半径
     return max_r_list,max_arg_list
 
+def visual_surface_data_list(case: io.Cases, filename: str, tag: str = "rho", surface_func = np.nanargmax):
+    # 用于返回可用于可视化的特征点列表（特征曲面上的点）。列表中每个元素为特征点的x,y,z
+    if case.program != Multi_Program.multi_3d:
+        raise ValueError("This function is only for Multi-3D")
+    
+    r_div=125
+    interp_list, *rest = get_spherical_nodes(case, filename, tag)
+    grid_list, *rest = gen_polar_coor_grid__cubic(case.get_data_tag(filename,"x"),
+                                                  case.get_data_tag(filename,"y"),
+                                                  case.get_data_tag(filename,"z"),
+                                                  r_div)
+    grid_list_split=np.array_split(grid_list, len(grid_list)//r_div)
+    ans_list=[]
+    for i in range(len(interp_list)):
+        if not (np.isnan(interp_list[i]).all()):
+            ans_list.append(grid_list_split[i][surface_func(interp_list[i])])
+    max_r_list, *rest=get_max_sphere_along_r_3(case, filename, tag)
+    return ans_list,max_r_list
