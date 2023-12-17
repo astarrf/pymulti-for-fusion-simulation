@@ -1,8 +1,11 @@
 import CaseIO as io
 import scipy.interpolate
 import numpy as np
-from . import Multi_Program
+from __init__ import Multi_Program
 
+R_DIV=125 #径向细分段数，全局变量，有需要请在此处改动
+RM_ANGLE=40 #边缘仰角，大于这个角度的样本将不被考虑，**角度值**，全局变量，有需要请在此处改动
+            #这里改成40是为了去除不可靠边界的影响，本应为50
 
 def rho_cell2node(cn_list, rho_list):
     # convert the list of rho into a list with the same length as x list
@@ -30,8 +33,8 @@ def rho_cell2node(cn_list, rho_list):
     return [x/y for x, y in zip(Quant, count)]
 
 
-def gen_polar_coor_grid__cubic(x_list, y_list, z_list, r_div=125, thetaZ_div=25, thetaY_div=25):
-    # see readme
+def gen_polar_coor_grid__cubic(x_list, y_list, z_list, r_div=R_DIV, thetaZ_div=25, thetaY_div=25):
+    # 方形的一个极坐标网格点阵，**不要给r_div赋值！！**，在全局变量处改动
     nnd = len(x_list)
     r_list = [np.sqrt(x_list[i]**2+y_list[i]**2+z_list[i]**2)
               for i in range(nnd)]
@@ -62,13 +65,34 @@ def gen_polar_coor_grid__cubic(x_list, y_list, z_list, r_div=125, thetaZ_div=25,
 
     return ans_list, r_interp_list
 
+def gen_polar_coor_grid__remove_periphery(x_list, y_list, z_list, 
+                                          rm_angle=RM_ANGLE, r_div=R_DIV, thetaZ_div=25, thetaY_div=25):
+    # 在gen_polar_coor_grid__cubic的基础上去掉对x轴倾角大于rm_angle的点
+    # rm_angle 输入**角度值**，**不要给rm_angle赋值！！**，在全局变量处改动
+    # **不要给r_div赋值！！**，在全局变量处改动
+    cubic_grid_list, r_interp_list=gen_polar_coor_grid__cubic(x_list, y_list, z_list, thetaZ_div=25, thetaY_div=25)
+    splited_cubic_grid_list=np.array_split(cubic_grid_list, len(cubic_grid_list)//r_div)
+    
+    def lift_angle(xyz):
+        x=xyz[0]
+        y=xyz[1]
+        z=xyz[2]
+        return np.arctan(np.sqrt(y**2+z**2)/x)
+    
+    ans_list=[]
+    for i in range(len(splited_cubic_grid_list)):
+        if lift_angle(splited_cubic_grid_list[i][0])<=np.deg2rad(rm_angle):
+            ans_list.extend(splited_cubic_grid_list[i])
+    
+    return ans_list,r_interp_list    
 
-def polar_coordinate_interp(x_list, y_list, z_list, val_list, r_div=125, thetaZ_div=25, thetaY_div=25):
+def polar_coordinate_interp(x_list, y_list, z_list, val_list, r_div=R_DIV, thetaZ_div=25, thetaY_div=25):
     # use a gen_..._grid function and evaluate the interpolated value at gridpoints
     # here val_list can be a list of any kind of values with the same length as x_list
+    # **不要给r_div赋值！！**，在全局变量处改动
 
-    grid_list, r_interp_list = gen_polar_coor_grid__cubic(
-        x_list, y_list, z_list, r_div, thetaZ_div, thetaY_div)
+    grid_list, r_interp_list = gen_polar_coor_grid__remove_periphery(
+        x_list, y_list, z_list, RM_ANGLE, r_div, thetaZ_div, thetaY_div)
     # here function are changeable
     ng = r_div*thetaZ_div*thetaY_div
     var_interp = scipy.interpolate.griddata(
@@ -104,3 +128,43 @@ def get_max_sphere_along_r_3(case: io.Cases, filename: str, tag: str = "rho"):
     max_r_list=[r_list[i] for i in max_arg_list] #存最大值位置的半径
     return max_r_list,max_arg_list
 
+def get_max_value_along_r_3(case: io.Cases, filename: str, tag: str = "rho"):
+    # 取每条轴上的最大值
+    if case.program != Multi_Program.multi_3d:
+        raise ValueError("This function is only for Multi-3D")
+    interp_list, r_list = get_spherical_nodes(case, filename, tag)
+    max_arg_list = [] #存最大值位置的序号
+    max_value_list=[] #存最大值
+    for i in range(len(interp_list)):
+        if not (np.isnan(interp_list[i]).all()):
+            max_arg_list.append(np.nanargmax(interp_list[i]))
+            max_value_list.append(interp_list[i][max_arg_list[-1]])
+    max_r_list=[r_list[i] for i in max_arg_list] #存最大值位置的半径
+    return max_value_list,max_r_list,max_arg_list
+
+def visual_surface_data_list(case: io.Cases, filename: str, tag: str = "rho", surface_func = np.nanargmax):
+    # 用于返回可用于可视化的特征点列表。列表中每个元素为特征点的x,y,z
+    if case.program != Multi_Program.multi_3d:
+        raise ValueError("This function is only for Multi-3D")
+    
+    r_div=R_DIV
+    interp_list, *rest = get_spherical_nodes(case, filename, tag)
+    grid_list, *rest = gen_polar_coor_grid__remove_periphery(case.get_data_tag(filename,"x"),
+                                                             case.get_data_tag(filename,"y"),
+                                                             case.get_data_tag(filename,"z"))
+    grid_list_split=np.array_split(grid_list, len(grid_list)//r_div)
+    ans_list=[]
+    for i in range(len(interp_list)):
+        if not (np.isnan(interp_list[i]).all()):
+            ans_list.append(grid_list_split[i][surface_func(interp_list[i])])
+    max_r_list, *rest=get_max_sphere_along_r_3(case, filename, tag)
+    return ans_list,max_r_list
+
+def heterogeneity_quantization(case: io.Cases, filename: str, tag: str = "T", weight_r=0.7, weight_v=0.3):
+    #测量两个标准差平均值比：tag最大面位置和tag最大点值，分别以wight_r,weight_v加权后求和返回
+    max_value_list,max_r_list,*rest=get_max_value_along_r_3(case,filename,tag)
+    j_v=np.sqrt(np.var(max_value_list))/np.mean(max_value_list)
+    j_r=np.sqrt(np.var(max_r_list))/np.mean(max_r_list)
+    return weight_r*j_r+weight_v*j_v,j_v,j_r
+    
+    
