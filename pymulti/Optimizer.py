@@ -3,11 +3,13 @@
 import os
 import skopt
 import numpy as np
-from . import CaseIO as io  # 假设这里是相对导入
+import CaseIO as io
+from time import sleep
+from datetime import datetime
 
 
 class BayesOptimizer():
-    def __init__(self, program: str, test_name: str, CaseDir: str, source_path: str, file_name: str, tag: str, features: list, func):
+    def __init__(self, program: str, test_name: str, CaseDir: str, source_path: str, file_name: str, tag: str, features: list, func, prefix: list = [], suffix: list = [], sleep_T=10):
         """
         Bayes优化器的初始化函数。
 
@@ -20,6 +22,9 @@ class BayesOptimizer():
         - file_name: 读取优化标准的文件路径
         - tag: 读取优化标准的标签
         - func: 目标函数
+        - prefix: 前缀列表
+        - suffix: 后缀列表
+        - sleep_T: 每次检查文件是否生成的时间间隔
         """
         self.program = program
         self.test_name = test_name
@@ -29,10 +34,13 @@ class BayesOptimizer():
         self.file_name = file_name
         self.tag = tag
         self.func = func
+        self.prefix = prefix
+        self.suffix = suffix
+        self.sleep_T = sleep_T
 
     def run(self, dimensions: list, delta: float = 1e-3,
             print_step: bool = False, do_delta_stop: bool = True,
-            n_calls: int = 5000, random_state=0):
+            n_calls: int = 5000, random_state=0, sleep_T=10):
         """
         运行Bayes优化器。
 
@@ -71,21 +79,38 @@ class BayesOptimizer():
         返回：
         - reward: 目标函数值
         """
-        replace_list = io.merge_feature(self.features, x)
-        target_path_name = f'{self.CaseDir}/{self.test_name}'
-        for r_list in replace_list:
-            target_path_name += f'_{r_list[0]}{r_list[1]}'
-        target_path = os.path.abspath(f'{self.CaseDir}/{self.test_name}')
+        new_x = []
+        for i, xx in enumerate(x):
+            pre, suf = '', ''
+            if i < len(self.prefix):
+                pre = self.prefix[i]
+            if i < len(self.suffix):
+                suf = self.suffix[i]
+            xx = f'{pre}{xx}{suf}'
+            new_x.append(xx)
+        replace_list = io.merge_feature(self.features, new_x)
+        target_path_name = f'/{self.test_name}'
+        now = datetime.now()
+        time = now.strftime("%Y%m%d%H%M")
+        target_path_name = f'{target_path_name}_{time}'
+        target_path_name = target_path_name[:32]
+        print(self.CaseDir, self.source_path, target_path_name)
         case = io.Cases(self.program, self.CaseDir, self.source_path,
-                        target_path, replace_list)
-        case_p = case.run()
-        case_p.wait()
+                        target_path_name, replace_list)
+        case.new_case()
+        case.run()
+        case_file_name = f'{self.CaseDir}/{target_path_name}_3DM/{self.file_name}'
+        print(case_file_name)
+        running = True
+        while running:
+            running = not (os.path.isfile(case_file_name))
+            sleep(self.sleep_T)
         reward = self.func(case, self.file_name, self.tag)
         return reward
 
 
 class Traverser():
-    def __init__(self, program: str, test_name: str, bashrc_path: str, CaseDir: str, source_path: str, traverse_list: list):
+    def __init__(self, program: str, test_name: str, bashrc_path: str, CaseDir: str, source_path: str, traverse_list: list, prefix: list = [], suffix: list = []):
         """
         遍历器的初始化函数。
         参数：
@@ -96,6 +121,8 @@ class Traverser():
         - CaseDir: 案例目录
         - source_path: 源代码路径
         - traverse_list: 遍历列表:[[feature1,[val1_1,val2_1,...]],[feature2,[val1_2,val2_2,...]],...]
+        - prefix: 前缀列表
+        - suffix: 后缀列表
         """
         self.program = program
         self.test_name = test_name
@@ -105,6 +132,8 @@ class Traverser():
         self.traverse_list = traverse_list
         self.feature, self.feature_range = self.__traverse_list_reshape_(
             self.traverse_list)
+        self.prefix = prefix
+        self.suffix = suffix
 
     def __traverse_list_reshape_(self, list_2d: list):
         """
@@ -123,17 +152,28 @@ class Traverser():
         运行遍历器。
         """
         for i in range(len(self.feature_range)):
+            x = self.feature_range[i]
+            new_x = []
+            for i, xx in enumerate(x):
+                pre, suf = '', ''
+                if i < len(self.prefix):
+                    pre = self.prefix[i]
+                if i < len(self.suffix):
+                    suf = self.suffix[i]
+                xx = f'{pre}{xx}{suf}'
+            new_x.append(xx)
             replace_list = io.merge_feature(
-                self.feature, self.feature_range[i])
-            target_path_name = f'{self.CaseDir}/{self.test_name}'
-            for r_list in replace_list:
-                target_path_name += f'_{r_list[0]}{r_list[1]}'
-            target_path = os.path.abspath(f'{self.CaseDir}/{self.test_name}_')
+                self.feature, new_x)
+            target_path_name = f'/{self.test_name}'
+            now = datetime.now()
+            time = now.strftime("%Y%m%d%H%M")
+            target_path_name = f'{target_path_name}_{time}'
+            target_path_name = target_path_name[:24]
+            print(self.CaseDir, self.source_path, target_path_name)
             case = io.Cases(self.program, self.CaseDir, self.source_path,
-                            target_path, replace_list)
-            case_p = case.run()
-            # case_p.wait()
-            # data = case.data_get()
+                            target_path_name, replace_list)
+            case.new_case()
+            case.run()
             if print_step:
                 msg = ''
                 for r_list in replace_list:
