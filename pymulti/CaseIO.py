@@ -1,10 +1,9 @@
 # 导入库的方法：import pymulti.CaseIO
-from . import os
-from . import shutil
-from . import subprocess
-from . import re
-from . import warnings
-from . import Multi_Program
+import os
+import subprocess
+import re
+import warnings
+from __init__ import Multi_Program
 import struct
 import numpy as np
 import glob
@@ -113,6 +112,7 @@ class Cases():
     def new_case(self):
         # 生成新case
         self.__mkdir_()
+        print('dir made')
         if self.replace_list == None:
             return
         self.__precheck_()
@@ -128,8 +128,8 @@ class Cases():
         运行该case
         """
         runorder = 'cd '+self.target_path
-        p = subprocess.run(runorder+' && ./RUN', shell=True)
-        return p  # 返回进程对象，用于等待进程结束
+        print(runorder)
+        subprocess.run(runorder+';pwd;'+' ./RUN', shell=True)
 
     def __data_Struct_(self, filename):
         # here filename should be ***.d
