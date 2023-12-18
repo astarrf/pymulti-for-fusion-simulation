@@ -40,7 +40,7 @@ class BayesOptimizer():
 
     def run(self, dimensions: list, delta: float = 1e-3,
             print_step: bool = False, do_delta_stop: bool = True,
-            n_calls: int = 5000, random_state=0, sleep_T=10):
+            n_calls: int = 5000, random_state=0, x0=None, y0=None):
         """
         运行Bayes优化器。
 
@@ -66,7 +66,7 @@ class BayesOptimizer():
         if do_delta_stop:
             callback_list.append(delta_stop)
         res = skopt.gp_minimize(self.__bofunc_, dimensions, n_calls=n_calls,
-                                callback=callback_list, random_state=random_state)
+                                callback=callback_list, x0=x0, y0=y0, random_state=random_state)
         return res
 
     def __bofunc_(self, x):
