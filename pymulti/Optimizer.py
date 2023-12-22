@@ -151,22 +151,23 @@ class Traverser():
         """
         运行遍历器。
         """
+        case_list = []
         for i in range(len(self.feature_range)):
             x = self.feature_range[i]
             new_x = []
-            for i, xx in enumerate(x):
+            for j, xx in enumerate(x):
                 pre, suf = '', ''
-                if i < len(self.prefix):
-                    pre = self.prefix[i]
-                if i < len(self.suffix):
-                    suf = self.suffix[i]
+                if j < len(self.prefix):
+                    pre = self.prefix[j]
+                if j < len(self.suffix):
+                    suf = self.suffix[j]
                 xx = f'{pre}{xx}{suf}'
             new_x.append(xx)
             replace_list = io.merge_feature(
                 self.feature, new_x)
             target_path_name = f'/{self.test_name}'
             now = datetime.now()
-            time = now.strftime("%Y%m%d%H%M")
+            time = now.strftime("%Y%m%d%H%M%S")
             target_path_name = f'{target_path_name}_{time}'
             target_path_name = target_path_name[:24]
             print(self.CaseDir, self.source_path, target_path_name)
@@ -174,8 +175,10 @@ class Traverser():
                             target_path_name, replace_list)
             case.new_case()
             case.run()
+            case_list.append(case)
             if print_step:
                 msg = ''
                 for r_list in replace_list:
                     msg += f'{r_list[0]}={r_list[1]},'
                 print(f'第{i+1}次遍历的参数：{msg}')
+        return case_list
