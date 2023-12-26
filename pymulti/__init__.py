@@ -44,3 +44,18 @@ def init(program: str, bashrc_path: str = None, program_path: str = None):
         except Exception as e:
             init_one(program, program_path)
     os.system('echo $MULTI')  # 打印环境变量MULTI的值
+
+
+def findallcases(path: str, rule: str = None):
+    """
+    从路径中找到所有的case
+    :param path: 路径
+    :return: 所有的case
+    """
+    files = [file for file in os.listdir(path)]
+    my_files = []
+    for file in files:
+        flag = re.search(rule, file)
+        if flag != None:
+            my_files.append(file)
+    return my_files
