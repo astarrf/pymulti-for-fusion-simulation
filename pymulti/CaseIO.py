@@ -109,6 +109,18 @@ class Cases():
                 self.content[line_num] = re.sub(
                     f'{feature}\s+=.*?;', f"{feature} = {new_val};", self.content[line_num])
 
+    def get_origin_param(self, feature) -> list:
+        # 从user.r获取原始参数
+        content_find = []
+        with open(self.file_path, "r", encoding="utf-8") as f:
+            self.content = f.readlines()
+        for line in self.content:
+            ans = re.findall(f'{feature}\s+=.*?;', line)
+            # print(ans)
+            if ans:
+                content_find.append(ans[0])
+        return content_find
+
     def new_case(self):
         # 生成新case
         self.__mkdir_()
