@@ -39,7 +39,7 @@ my_case=io.Cases(program=Multi_Program.multi_3d,
 my_case.new_case()
 my_case.run()
 ```
-
+### PyMulti.Optimizer
 A demo of using the ```pymulti.optimizer``` is:
 ```python
 import pymulti as pm
