@@ -6,6 +6,7 @@ import numpy as np
 import CaseIO as io
 from time import sleep
 from datetime import datetime
+from multiprocessing import Pool
 
 
 class BayesOptimizer():
@@ -38,35 +39,81 @@ class BayesOptimizer():
         self.suffix = suffix
         self.sleep_T = sleep_T
 
-    def run(self, dimensions: list, delta: float = 1e-3,
-            print_step: bool = False, do_delta_stop: bool = True,
-            n_calls: int = 5000, random_state=0, x0=None, y0=None):
+    def run(self, dimensions: list, x0=None, y0=None, n_calls=100, random_state=None, n_jobs: int = 1, do_delta_stop: bool = False, delta: float = 0.01, print_step: bool = False):
         """
         运行Bayes优化器。
 
         参数：
-        - dimensions: 参数的范围
-        - delta: 收敛判定的阈值
-        - print_step: 是否打印每步的结果
-        - n_calls: 最大迭代次数
-        - random_state: 随机数生成器的种子
+        - dimensions: 参数维度
+        - x0: 初始参数
+        - y0: 初始函数值
+        - n_calls: 最大调用次数
+        - random_state: 随机种子（没有测试）
+        - n_jobs: 进程池最大数量
+        - do_delta_stop: 是否使用最优值与上一个最优值差小于delta判断停止
+        - delta: 停止条件
+        - print_step: 是否打印每一步的结果
 
         返回：
         - res: 优化结果
         """
-        # 定义回调函数，每次迭代后打印结果
-        def onstep(res):
-            print("最新尝试的参数：", res.x)
-            print("最新尝试的函数值：", res.fun)
-        # 定义回调函数，当函数值的改变小于0.01时停止优化
-        delta_stop = skopt.callbacks.DeltaYStopper(delta)
-        callback_list = []
-        if print_step:
-            callback_list.append(onstep)
-        if do_delta_stop:
-            callback_list.append(delta_stop)
-        res = skopt.gp_minimize(self.__bofunc_, dimensions, n_calls=n_calls,
-                                callback=callback_list, x0=x0, y0=y0, random_state=random_state)
+        x = []  # 用于存储x参数
+        y = []  # 用于存储y参数
+        if x0 is None:
+            x0 = []
+        if y0 is None:
+            y0 = []
+        for xx in x0:
+            x.append(xx)
+        for yy in y0:
+            y.append(yy)
+
+        rng = skopt.utils.check_random_state(random_state)  # 随机种子
+        space = skopt.utils.normalize_dimensions(dimensions)  # 参数维度
+        xi = 0.01
+        kappa = 1.96
+        base_estimator = skopt.utils.cook_estimator(
+            "GP", space=space, random_state=rng.randint(0, np.iinfo(np.int32).max),
+            noise="gaussian")  # 用于拟合目标函数的模型
+        acq_func_kwargs = {"xi": xi, "kappa": kappa}  # 用于计算下一个点的函数值
+        res = skopt.Optimizer(
+            dimensions=dimensions,
+            base_estimator=base_estimator,
+            acq_func="gp_hedge",
+            acq_func_kwargs=acq_func_kwargs,
+            random_state=random_state)  # 优化器
+        # 如果有初始点，先计算初始点的函数值
+        if x0:
+            res.tell(x0, y0, fit=True)
+            best_y = np.min(res.yi)
+        else:
+            best_y = 1e10
+        # 多进程计算
+        with Pool(n_jobs) as p:
+            for i in range(n_calls):
+                x_try = res.ask()
+                y_try = p.map(self.__bofunc_, [x_try])
+                res.tell([x_try], y_try, fit=True)
+                x.append(x_try)
+                y.append(y_try[0])
+                res.x = x
+                res.y = y
+                # 如果使用delta停止，当优化小于delta时停止
+                if do_delta_stop:
+                    if best_y - np.min(res.yi) < delta:
+                        break
+                    else:
+                        best_y = np.min(res.yi)
+                # 打印每一步的结果
+                if print_step:
+                    print("最新尝试的参数：", x_try)
+                    print("最新尝试的函数值：", y_try)
+        p.close()
+        index = np.argmin(res.y)  # 最优参数的索引
+        x_ans = res.x[index]  # 最优参数
+        y_ans = res.y[index]  # 最优函数值
+        res.x_ans = x_ans  # 最优参数
+        res.y_ans = y_ans  # 最优函数值
         return res
 
     def __bofunc_(self, x):
