@@ -6,7 +6,7 @@ import numpy as np
 import CaseIO as io
 from time import sleep
 from datetime import datetime
-from multiprocessing import Pool
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class BayesOptimizer():
@@ -88,14 +88,20 @@ class BayesOptimizer():
             best_y = np.min(res.yi)
         else:
             best_y = 1e10
-        # 多进程计算
-        with Pool(n_jobs) as p:
+        # 使用进程池计算下一个点的函数值
+        with ThreadPoolExecutor(n_jobs) as executor:
             for i in range(n_calls):
-                x_try = res.ask()
-                y_try = p.map(self.__bofunc_, [x_try])
-                res.tell([x_try], y_try, fit=True)
-                x.append(x_try)
-                y.append(y_try[0])
+                x_trys = res.ask(n_points=n_jobs)
+                future_results = {executor.submit(
+                    self.__bofunc_, xtmp): xtmp for xtmp in x_trys}
+                y_trys = []
+                for future in as_completed(future_results):
+                    y_trys.append(future.result())
+                res.tell(x_trys, y_trys, fit=True)
+                for x_try in x_trys:
+                    x.append(x_try)
+                for y_try in y_trys:
+                    y.append(y_try)
                 res.x = x
                 res.y = y
                 # 如果使用delta停止，当优化小于delta时停止
@@ -106,9 +112,9 @@ class BayesOptimizer():
                         best_y = np.min(res.yi)
                 # 打印每一步的结果
                 if print_step:
-                    print("最新尝试的参数：", x_try)
-                    print("最新尝试的函数值：", y_try)
-        p.close()
+                    for i in range(len(x_trys)):
+                        print("最新尝试的参数：", x_trys[i])
+                        print("最新尝试的函数值：", y_trys[i])
         index = np.argmin(res.y)  # 最优参数的索引
         x_ans = res.x[index]  # 最优参数
         y_ans = res.y[index]  # 最优函数值
