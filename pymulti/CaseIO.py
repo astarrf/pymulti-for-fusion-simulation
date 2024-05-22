@@ -3,7 +3,7 @@ import os
 import subprocess
 import re
 import warnings
-from __init__ import Multi_Program
+from utils import Multi_Program
 import struct
 import numpy as np
 import glob
