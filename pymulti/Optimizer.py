@@ -5,12 +5,14 @@ import skopt
 import numpy as np
 import CaseIO as io
 from time import sleep
+import threading
 from datetime import datetime
+from typing import Union, List
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class BayesOptimizer():
-    def __init__(self, program: str, test_name: str, CaseDir: str, source_path: str, file_name: str, tag: str, features: list, func, prefix: list = [], suffix: list = [], sleep_T=10):
+    def __init__(self, program: str, test_name: str, CaseDir: str, source_path: str, file_name: Union[str, List[str]], tag: str, features: list, func, prefix: list = [], suffix: list = [], sleep_T=1, run_time_count=2000):
         """
         Bayes优化器的初始化函数。
 
@@ -26,6 +28,7 @@ class BayesOptimizer():
         - prefix: 前缀列表
         - suffix: 后缀列表
         - sleep_T: 每次检查文件是否生成的时间间隔
+        - run_time_count: 超时循环数设置，总超时时长为(run_time_count*sleep_T)秒
         """
         self.program = program
         self.test_name = test_name
@@ -38,8 +41,9 @@ class BayesOptimizer():
         self.prefix = prefix
         self.suffix = suffix
         self.sleep_T = sleep_T
+        self.run_time_count = run_time_count
 
-    def run(self, dimensions: list, x0=None, y0=None, n_calls=100, random_state=None, n_jobs: int = 1, do_delta_stop: bool = False, delta: float = 0.01, print_step: bool = False):
+    def run(self, dimensions: list, x0=None, y0=None, n_calls=100, random_state=None, n_jobs: int = 5, do_delta_stop: bool = False, delta: float = 0.01, print_step: bool = False, train_log=True, log_path=None):
         """
         运行Bayes优化器。
 
@@ -53,6 +57,8 @@ class BayesOptimizer():
         - do_delta_stop: 是否使用最优值与上一个最优值差小于delta判断停止
         - delta: 停止条件
         - print_step: 是否打印每一步的结果
+        - train_log: 是否记录训练数据
+        - log_path: 训练数据保存路径
 
         返回：
         - res: 优化结果
@@ -87,17 +93,32 @@ class BayesOptimizer():
             res.tell(x0, y0, fit=True)
             best_y = np.min(res.yi)
         else:
-            best_y = 1e10
-        # 使用进程池计算下一个点的函数值
+            best_y = np.inf
+            # 使用进程池计算下一个点的函数值
+        file_lock = threading.Lock()
         with ThreadPoolExecutor(n_jobs) as executor:
             for i in range(n_calls):
                 x_trys = res.ask(n_points=n_jobs)
+                x_trys_rounded = [[round(x, 2) for x in x_try]
+                                  for x_try in x_trys]
+                print(x_trys_rounded)
                 future_results = {executor.submit(
-                    self.__bofunc_, xtmp): xtmp for xtmp in x_trys}
+                    self.bofunc, xtmp, x_trys_rounded.index(xtmp)): xtmp for xtmp in x_trys_rounded}
+                x_trys_not_timed_out = []
                 y_trys = []
                 for future in as_completed(future_results):
-                    y_trys.append(future.result())
-                res.tell(x_trys, y_trys, fit=True)
+                    reward, run_time_error = future.result()
+                    if run_time_error == 0:
+                        x_trys_not_timed_out.append(future_results[future])
+                        y_trys.append(reward)
+                    if train_log:
+                        if log_path is None:
+                            raise ValueError("log_path is None")
+                        with file_lock:
+                            with open(log_path, "a") as f:
+                                row = future_results[future].append(reward)
+                                f.write(' '.join(map(str, row)) + '\n')
+                res.tell(x_trys_not_timed_out, y_trys, fit=True)
                 for x_try in x_trys:
                     x.append(x_try)
                 for y_try in y_trys:
@@ -122,7 +143,7 @@ class BayesOptimizer():
         res.y_ans = y_ans  # 最优函数值
         return res
 
-    def __bofunc_(self, x):
+    def bofunc(self, x, num):
         """
         Bayes优化的目标函数。
 
@@ -132,6 +153,7 @@ class BayesOptimizer():
         返回：
         - reward: 目标函数值
         """
+        run_time_error = 0
         new_x = []
         for i, xx in enumerate(x):
             pre, suf = '', ''
@@ -144,22 +166,36 @@ class BayesOptimizer():
         replace_list = io.merge_feature(self.features, new_x)
         target_path_name = f'/{self.test_name}'
         now = datetime.now()
-        time = now.strftime("%Y%m%d%H%M")
-        target_path_name = f'{target_path_name}_{time}'
+        time = now.strftime("%m%d%H%M")
+        target_path_name = f'{target_path_name}{time}_{round(x[0])}_{round(x[1])}_{num}'
         target_path_name = target_path_name[:32]
         print(self.CaseDir, self.source_path, target_path_name)
         case = io.Cases(self.program, self.CaseDir, self.source_path,
                         target_path_name, replace_list)
         case.new_case()
         case.run()
-        case_file_name = f'{self.CaseDir}/{target_path_name}_3DM/{self.file_name}'
-        print(case_file_name)
+        if isinstance(self.file_name, list):
+            case_file_names = [
+                f'{self.CaseDir}{target_path_name}_3DM/{name}' for name in self.file_name]
+        else:
+            case_file_names = [
+                f'{self.CaseDir}{target_path_name}_3DM/{self.file_name}']
+        print(case_file_names)
         running = True
+        run_time_cnt = 0
         while running:
-            running = not (os.path.isfile(case_file_name))
+            if run_time_cnt >= self.run_time_count:
+                run_time_error = 1
+                break
+            running_list = [os.path.isfile(case_file_name)
+                            for case_file_name in case_file_names]
+            running = not (any(running_list))
+            if run_time_cnt % 20 == 0:
+                print('sleeping')
             sleep(self.sleep_T)
+            run_time_cnt += 1
         reward = self.func(case, self.file_name, self.tag)
-        return reward
+        return reward, run_time_error
 
 
 class Traverser():
