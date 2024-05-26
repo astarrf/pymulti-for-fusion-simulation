@@ -34,6 +34,15 @@ def init_one(program: str, program_path: str = None):
 
 
 def init(program: str, bashrc_path: str = None, program_path: str = None):
+    '''
+    初始化环境变量
+    program: 
+        Multi_Program类型，指定要初始化的程序
+    bashrc_path: 
+        str类型，指定bashrc文件路径
+    program_path: 
+        str类型，指定程序路径
+    '''
     if bashrc_path is None:
         init_one(program, program_path)
     else:
@@ -44,24 +53,45 @@ def init(program: str, bashrc_path: str = None, program_path: str = None):
     os.system('echo $MULTI')  # 打印环境变量MULTI的值
 
 
-def findAllCases(path: str, rule: str = None):
+def findAllCases(path: str, rule: str = None) -> list:
+    '''
+    寻找指定路径下的所有文件
+    path: 
+        str类型，指定要查找的路径
+    rule:
+        str类型，指定查找规则
+    '''
     files = [file for file in os.listdir(path)]
     my_files = []
     for file in files:
         if re.search(rule, file) != None:
             my_files.append(file)
-    print(len(my_files))
+    print(f'number of files found: {len(my_files)}')
     return my_files
 
 
-def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, file_path: str, rule: str = None):
-    my_files = findAllCases(file_path, rule)
+def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, cases_path: str, rule: str = None, n_jobs: int = 5) -> list:
+    '''
+    获取所有文件的reward
+    judge_func: 
+        function类型，指定评价函数
+    CaseDir:
+        str类型，指定case路径
+    source_path:
+        str类型，指定source路径
+    output_path:
+        str类型，指定输出文件路径
+    cases_path:
+        str类型，指定cases路径
+    rule:
+        str类型，指定查找规则
+    n_jobs:
+        int类型，指定并行任务数
+    '''
+    my_files = findAllCases(cases_path, rule)
     # 初始化变量
     rwd = []
-    param1 = []
-    param2 = []
     cnt = 1
-    n_jobs = 5
     file_lock = threading.Lock()
 
     tot = len(my_files)
@@ -69,7 +99,7 @@ def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, f
 
     # 定义处理函数
 
-    def process_case(file):
+    def process_case(file) -> Cases:
         my_case = Cases(Multi_Program.multi_3d,
                         CaseDir=CaseDir,
                         source_path=source_path,
@@ -77,15 +107,14 @@ def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, f
                         replace_list=None)
         return my_case
 
-    def judge_case(case, index):
+    def judge_case(case: Cases, index):
         print(f'start:{index}')
         return judge_func(case), case.file_path
 
     # 创建并提交任务
     with ThreadPoolExecutor(max_workers=n_jobs) as executor:
         # 创建case并获取参数
-        futures = {executor.submit(process_case, file)
-                                   : file for file in my_files}
+        futures = {executor.submit(process_case, file): file for file in my_files}
 
         # 收集case和参数
         cases = []
@@ -95,7 +124,8 @@ def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, f
                 cases.append(my_case)
                 print(f'{cnt}/{tot}', my_case.file_path)
             except Exception as e:
-                print(f"Error processing file {futures[future]}: {e}")
+                raise Exception(
+                    f"Error processing file {futures[future]}: {e}")
             cnt += 1
 
         # 创建并提交judge任务
@@ -111,9 +141,8 @@ def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, f
                     with open(output_path, "a") as f:
                         f.write(f'{file} {reward}\n')
             except Exception as e:
-                print(f"Error judging case {judge_futures[future]}: {e}")
+                raise Exception(
+                    f"Error judging case {judge_futures[future]}: {e}")
 
     print("Processing complete.")
-    print(param1)
-    print(param2)
-    print(rwd)
+    return rwd
