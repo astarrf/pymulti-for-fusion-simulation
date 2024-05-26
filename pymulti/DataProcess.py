@@ -1,7 +1,7 @@
-import CaseIO as io
+from .CaseIO import Cases
 import scipy.interpolate
 import numpy as np
-from utils import Multi_Program
+from .utils import Multi_Program
 import matplotlib.pyplot as plt
 import os
 import re
@@ -166,7 +166,7 @@ def polar_coordinate_interp(x_list, y_list, z_list, val_list):
 
 
 # 整合好的函数，输入case,filename和目标tag，返回经过插值的结果
-def get_spherical_nodes(case: io.Cases, filename: str, tag: str = "rho"):
+def get_spherical_nodes(case: Cases, filename: str, tag: str = "rho"):
     if case.program != Multi_Program.multi_3d:
         raise ValueError("This function is only for Multi-3D")
     x_list, y_list, z_list = case.get_coordinate(filename)
@@ -215,7 +215,7 @@ def shock_wave_interval_along_r(rho_interp_list, r_list):
 
 
 # 返回每条轴上几波区域内的插值结果
-def shock_wave_interval_interp(case: io.Cases, filename: str, tag: str = "rho"):
+def shock_wave_interval_interp(case: Cases, filename: str, tag: str = "rho"):
     rho_interp_list, r_list, theta_list = get_spherical_nodes(
         case, filename, "rho")
     LR_r_list = shock_wave_interval_along_r(rho_interp_list, r_list)
@@ -351,7 +351,7 @@ def filename_time_list(filenames):  # 将一个filenames字符串列表中的数
 
 
 # 在一个case中将在time_range_pair内的所有file的func值取出列成表
-def function_time_list(case: io.Cases, time_range_pair, func):
+def function_time_list(case: Cases, time_range_pair, func):
     '''
     这里的func形如func(case,filename)
     time_range_pair应为一个二元列表[ini fnl]，代表处理的时间范围
@@ -393,9 +393,9 @@ def smooth_val_time_list(val_time_pair_list, interval=1e-11, kernel_array=[1/50,
 # ----------自定义的Judge Function
 
 
-def judge_func_depo(case: io.Cases):  # 为depo特制的Judge_func
+def judge_func_depo(case: Cases):  # 为depo特制的Judge_func
 
-    def single_file_judge(case: io.Cases, filename: str):
+    def single_file_judge(case: Cases, filename: str):
         depo_interp_list, r_list, theta_list = get_spherical_nodes(
             case, filename, tag='depo')
         int_depo_list = get_integrated_along_r_all(
@@ -417,9 +417,9 @@ def judge_func_depo(case: io.Cases):  # 为depo特制的Judge_func
     return smoothed_val_list[index_1em9]
 
 
-def judge_func_T(case: io.Cases):  # 为T特制的judge_func
+def judge_func_T(case: Cases):  # 为T特制的judge_func
 
-    def single_file_judge(case: io.Cases, filename: str):
+    def single_file_judge(case: Cases, filename: str):
         T_interp_list, r_list, theta_list = get_spherical_nodes(
             case, filename, tag='T')
         max_value_list, max_r_list, max_arg_list = get_max_along_r(
