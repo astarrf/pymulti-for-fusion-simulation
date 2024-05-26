@@ -14,5 +14,13 @@ setup(
         'numpy',
         'enum',
         'struct',
+        'glob',
+        'matplotlib',
+        'scipy',
+        'threading',
+        'datetime',
+        'concurrent',
+        'typing',
+        'time',
     ],
 )
