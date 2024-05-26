@@ -136,15 +136,22 @@ class BayesOptimizer():
                 for future in as_completed(future_results):
                     reward, run_time_error = future.result()
                     if run_time_error == 0:
-                        x_trys_not_timed_out.append(future_results[future])
+                        x_this_try = future_results[future]
+                        x_trys_not_timed_out.append(x_this_try)
                         y_trys.append(reward)
-                    if train_log:
-                        if log_path is None:
-                            raise ValueError("log_path is None")
-                        with file_lock:
-                            with open(log_path, "a") as f:
-                                row = future_results[future].append(reward)
-                                f.write(' '.join(map(str, row)) + '\n')
+                        try:
+                            if train_log:
+                                if log_path is None:
+                                    raise ValueError("log_path is None")
+                                with file_lock:
+                                    with open(log_path, "a") as f:
+                                        x_this_try.append(reward)
+                                        text = ''
+                                        for r in x_this_try:
+                                            text += str(r) + ' '
+                                        f.write(text + '\n')
+                        except Exception as e:
+                            print(e)
                 res.tell(x_trys_not_timed_out, y_trys, fit=True)
                 for x_try in x_trys:
                     x.append(x_try)
