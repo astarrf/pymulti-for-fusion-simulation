@@ -20,60 +20,65 @@ def merge_feature(list1: list, list2: list):
 
 
 class Cases():
-    def __init__(self, program: str, CaseDir: str, source_path: str, target_path: str, replace_list=None, file_path='/User.r'):
+    def __init__(self, program: str, CaseDir: str, source_path: str, target_path: str, replace_list: list = None, file_path: str = '/User.r'):
         """
-        feature如果多次出现,开启rep_virable后将会全部替换
-        否则可以使用$符号来区分不同的feature
-        如对于同一个feature可以使用'feature$0','feature$1'来区分,
-        并且如果多于或者少于实际出现的次数，将会按照较少的次数进行替换
+        program:
+            Multi_Program类型，指定要初始化的程序
+        CaseDir: 
+            str类型，指定case所在的文件夹
+        source_path: 
+            str类型，指定源文件路径（相对于CaseDir）
+        target_path: 
+            str类型，指定目标文件路径（相对于CaseDir）
+        replace_list: 
+            list类型，指定要替换的参数列表，格式为[[feature,new_val],...]
+            如对于同一个feature可以使用'feature$0','feature$1'来区分，
+            如果直接使用'feature'则会替换所有该feature出现的地方，
+            并且如果超出实际该feature出现的次数时会自动忽略
+        file_path: 
+            str类型，指定要修改的文件路径，默认为/User.r
         """
         self.program = program  # 程序
         self.CaseDir = CaseDir  # 运行cases文件夹
         self.source_path = self.CaseDir+source_path  # 复制父本路径
         self.target_path = self.CaseDir+target_path  # 复制子本路径
         self.file_path = self.target_path+file_path  # 修改文件路径，通常为默认值
-        # 需要修改的值，二维列表，如[[feature,new_val],...]
+        # 需要修改的值，二维列表，如[[feature$0,new_val],...]
         self.replace_list = replace_list
-        # 需要修改的值的行号，二维列表，如[[feature,line1,line2],...]
         self.feature_num_list = {}
         self.content = None  # 文件内容
 
     def __mkdir_(self):
+        '''
+        创建目标文件夹
+        '''
         cp = f'cd {self.CaseDir};mkdir {self.target_path} 2> /dev/null;cd {self.source_path};cp -p $(cat FILELIST) /{self.target_path}'
         os.system(cp)
-        '''
-        cp_order = f"cp {self.source_path}/*.m {self.target_path}"
-        if not os.path.exists(self.target_path):
-            # 如果目标路径不存在原文件夹的话就创建
-            # shutil.copytree(self.source_path, self.target_path)
-            os.system(f'')
-            os.system(cp_order)
-        else:
-            # 如果目标路径存在原文件夹的话就先删除
-            warnings.warn(f'{self.target_path} 目标路径已存在，将删除该路径下所有文件')
-            # shutil.rmtree(self.target_path)
-            # shutil.copytree(self.source_path, self.target_path)
-            os.system(f'rm -r {self.target_path}')
-            os.system(cp_order)
-        '''
 
     def __precheck_(self):
+        '''
+        预检查替换列表是否符合规范
+        '''
         for r_list in self.replace_list:
             if not (type(r_list) == list and len(r_list) == 2):
                 raise ValueError(
                     'replace_list应当是二维列表，如[[feature,new_val],...]')
 
     def __get_feature_name_(self):
+        '''
+        获取需要替换的特征名
+        '''
         for rl in self.replace_list:
             temp_f = rl[0]
             feature = temp_f if temp_f.find(
                 '$') == -1 else temp_f[:temp_f.find('$')]
             if not feature in self.feature_num_list:
                 self.feature_num_list[feature] = []
-        # self.feature_num_list = [[fl] for fl in self.feature_num_list]
 
     def __get_config_(self):
-        # 读取文件内容
+        '''
+        读取文件内容，获取需要的特征所在的所有行数
+        '''
         with open(self.file_path, "r", encoding="utf-8") as f:
             self.content = f.readlines()
         for i, line in enumerate(self.content):
@@ -83,16 +88,20 @@ class Cases():
                     break
 
     def __write_config_(self):
-        # 写入文件内容
+        '''
+        写入文件内容
+        '''
         with open(self.file_path, "w", encoding="utf-8") as f:
             f.writelines(self.content)
 
     def __update_feature_(self, feature: str, new_val: str):
         """
         替换文件中的字符串
-        :param file:文件名
-        :param feature:需要替换的变量名
-        :param new_val:新的变量值,必须为字符串
+
+        feature:
+            需要替换的变量名
+        new_val:
+            新的变量值,必须为字符串
         """
         do_replace = feature.find('$') != -1
         if do_replace:
@@ -109,8 +118,12 @@ class Cases():
                 self.content[line_num] = re.sub(
                     f'{feature}\s+=.*?;', f"{feature} = {new_val};", self.content[line_num])
 
-    def get_origin_param(self, feature) -> list:
-        # 从user.r获取原始参数
+    def get_origin_param(self, feature: str) -> list:
+        '''
+        从user.r获取原始参数
+        feature: 
+            str类型，指定要查找的特征名
+        '''
         content_find = []
         with open(self.file_path, "r", encoding="utf-8") as f:
             self.content = f.readlines()
@@ -122,10 +135,13 @@ class Cases():
         return content_find
 
     def new_case(self):
-        # 生成新case
+        '''
+        生成新case
+        '''
         self.__mkdir_()
         print('dir made')
         if self.replace_list == None:
+            warnings.warn('replace_list为空，将不会进行替换')
             return
         self.__precheck_()
         self.__get_feature_name_()
