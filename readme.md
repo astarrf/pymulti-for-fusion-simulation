@@ -6,7 +6,7 @@
 [![Build Status](https://travis-ci.org/your-username/your-library-name.svg?branch=master)](https://travis-ci.org/your-username/your-library-name)
 [![Coverage Status](https://coveralls.io/repos/github/your-username/your-library-name/badge.svg?branch=master)](https://coveralls.io/github/your-username/your-library-name?branch=master)
 
-Short description of your library.
+PyMulti is a script for user-friendly control of simulation program **MULTI**. There are tools to generate new cases with modified parameters as you want, based on given model case. Several evaluating functions can quantify the performance of your cases.  Some more advanced optimization for specific goals are also included to optimize parameters automatically. Visualization tools will also be available in the future.
 
 ## Features
 
@@ -25,12 +25,11 @@ A module for controlling a single case, from initializing a new case to get any 
 
 A demo for using the module is:
 ```python
-import pymulti as pm
-import pymulti.CaseIO as io
+from pymulti import init, Cases
 import numpy as np
 
-pm.init('multi_3d')
-my_case=io.Cases(program=Multi_Program.multi_3d, 
+init('multi_3d')
+my_case=Cases(program=Multi_Program.multi_3d, 
                        CaseDir='My/Case/Path', 
                        source_path='My/Source/Path', 
                        target_path='My/Target/Path',
@@ -43,18 +42,16 @@ my_case.run()
 A demo of using the ```pymulti.optimizer``` is:
 ```python
 import pymulti as pm
-import pymulti.Optimizer as opt
-import pymulti.CaseIO as io
 import numpy as np
 
 
-def my_func(case: io.Cases, file_name, tag):
+def my_func(case: pm.Cases, file_name, tag):
     data = case.get_data_tag(file_name, tag)
     reward = np.var(data)
     return reward
 
 pm.init('multi_3d')
-my_opt = opt.BayesOptimizer(program='multi_3d',
+my_opt = pm.BayesOptimizer(program='multi_3d',
                             test_name='BO_test',
                             CaseDir='My/Case/Path',
                             source_path='My/Source/Path',
