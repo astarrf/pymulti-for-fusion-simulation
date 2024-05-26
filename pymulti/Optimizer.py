@@ -3,7 +3,7 @@
 import os
 import skopt
 import numpy as np
-import CaseIO as io
+from .CaseIO import Cases, merge_feature
 from time import sleep
 import threading
 from datetime import datetime
@@ -16,19 +16,32 @@ class BayesOptimizer():
         """
         Bayes优化器的初始化函数。
 
-        参数：
-        - program: 选择程序
-        - test_name: 测试名称
-        - features: 特征列表
-        - CaseDir: 案例目录
-        - source_path: 源代码路径
-        - file_name: 读取优化标准的文件路径
-        - tag: 读取优化标准的标签
-        - func: 目标函数
-        - prefix: 前缀列表
-        - suffix: 后缀列表
-        - sleep_T: 每次检查文件是否生成的时间间隔
-        - run_time_count: 超时循环数设置，总超时时长为(run_time_count*sleep_T)秒
+        Parameters:
+        ---
+        program: 
+            选择程序
+        test_name: 
+            测试名称
+        features: 
+            特征列表
+        CaseDir: 
+            案例目录
+        source_path: 
+            源代码路径
+        file_name: 
+            读取优化标准的文件路径
+        tag: 
+            读取优化标准的标签
+        func: 
+            目标函数
+        prefix: 
+            前缀列表
+        suffix: 
+            后缀列表
+        sleep_T: 
+            每次检查文件是否生成的时间间隔
+        run_time_count: 
+            超时循环数设置，总超时时长为(run_time_count*sleep_T)秒
         """
         self.program = program
         self.test_name = test_name
@@ -47,21 +60,35 @@ class BayesOptimizer():
         """
         运行Bayes优化器。
 
-        参数：
-        - dimensions: 参数维度
-        - x0: 初始参数
-        - y0: 初始函数值
-        - n_calls: 最大调用次数
-        - random_state: 随机种子（没有测试）
-        - n_jobs: 进程池最大数量
-        - do_delta_stop: 是否使用最优值与上一个最优值差小于delta判断停止
-        - delta: 停止条件
-        - print_step: 是否打印每一步的结果
-        - train_log: 是否记录训练数据
-        - log_path: 训练数据保存路径
+        Parameters:
+        ---
+        dimensions: 
+            参数维度
+        x0: 
+            初始参数
+        y0: 
+            初始函数值
+        n_calls: 
+            最大调用次数
+        random_state: 
+            随机种子（没有测试）
+        n_jobs: 
+            进程池最大数量
+        do_delta_stop: 
+            是否使用最优值与上一个最优值差小于delta判断停止
+        delta: 
+            停止条件
+        print_step: 
+            是否打印每一步的结果
+        train_log: 
+            是否记录训练数据
+        log_path: 
+            训练数据保存路径
 
-        返回：
-        - res: 优化结果
+        Returns:
+        ---
+        res: 
+            优化结果
         """
         x = []  # 用于存储x参数
         y = []  # 用于存储y参数
@@ -147,11 +174,15 @@ class BayesOptimizer():
         """
         Bayes优化的目标函数。
 
-        参数：
-        - x: 参数
+        Parameters:
+        ---
+        x: 
+            参数
 
-        返回：
-        - reward: 目标函数值
+        Returns:
+        ---
+        reward: 
+            目标函数值
         """
         run_time_error = 0
         new_x = []
@@ -163,15 +194,15 @@ class BayesOptimizer():
                 suf = self.suffix[i]
             xx = f'{pre}{xx}{suf}'
             new_x.append(xx)
-        replace_list = io.merge_feature(self.features, new_x)
+        replace_list = merge_feature(self.features, new_x)
         target_path_name = f'/{self.test_name}'
         now = datetime.now()
         time = now.strftime("%m%d%H%M")
         target_path_name = f'{target_path_name}{time}_{round(x[0])}_{round(x[1])}_{num}'
         target_path_name = target_path_name[:32]
         print(self.CaseDir, self.source_path, target_path_name)
-        case = io.Cases(self.program, self.CaseDir, self.source_path,
-                        target_path_name, replace_list)
+        case = Cases(self.program, self.CaseDir, self.source_path,
+                     target_path_name, replace_list)
         case.new_case()
         case.run()
         if isinstance(self.file_name, list):
@@ -252,7 +283,7 @@ class Traverser():
                     suf = self.suffix[j]
                 xx = f'{pre}{xx}{suf}'
             new_x.append(xx)
-            replace_list = io.merge_feature(
+            replace_list = merge_feature(
                 self.feature, new_x)
             target_path_name = f'/{self.test_name}'
             now = datetime.now()
@@ -260,8 +291,8 @@ class Traverser():
             target_path_name = f'{target_path_name}_{time}'
             target_path_name = target_path_name[:24]
             print(self.CaseDir, self.source_path, target_path_name)
-            case = io.Cases(self.program, self.CaseDir, self.source_path,
-                            target_path_name, replace_list)
+            case = Cases(self.program, self.CaseDir, self.source_path,
+                         target_path_name, replace_list)
             case.new_case()
             case.run()
             case_list.append(case)
