@@ -4,6 +4,7 @@ import os
 import skopt
 import numpy as np
 from .CaseIO import Cases, merge_feature
+from .utils import print
 from time import sleep
 import threading
 from datetime import datetime
@@ -12,7 +13,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
 class BayesOptimizer():
-    def __init__(self, program: str, test_name: str, CaseDir: str, source_path: str, file_name: Union[str, List[str]], tag: str, features: list, func, prefix: list = [], suffix: list = [], sleep_T=1, run_time_count=2000):
+    def __init__(self, program: str, test_name: str, CaseDir: str, source_path: str, file_name: Union[str, List[str]], tag: str, features: list, func, prefix: list = [], suffix: list = []):
         """
         Bayes优化器的初始化函数。
 
@@ -53,10 +54,10 @@ class BayesOptimizer():
         self.func = func
         self.prefix = prefix
         self.suffix = suffix
-        self.sleep_T = sleep_T
-        self.run_time_count = run_time_count
+        self.sleep_T = None
+        self.run_time_count = None
 
-    def run(self, dimensions: list, x0=None, y0=None, n_calls=100, random_state=None, n_jobs: int = 5, do_delta_stop: bool = False, delta: float = 0.01, print_step: bool = False, train_log=True, log_path=None):
+    def run(self, dimensions: list, x0=None, y0=None, n_calls=100, random_state=None, n_jobs: int = 5, do_delta_stop: bool = False, delta: float = 0.01, sleep_T=1, run_time_count=2000, print_step: bool = False, train_result=True, result_path: str = None):
         """
         运行Bayes优化器。
 
@@ -90,6 +91,8 @@ class BayesOptimizer():
         res: 
             优化结果
         """
+        self.sleep_T = sleep_T
+        self.run_time_count = run_time_count
         x = []  # 用于存储x参数
         y = []  # 用于存储y参数
         if x0 is None:
@@ -136,24 +139,27 @@ class BayesOptimizer():
                 for future in as_completed(future_results):
                     reward, run_time_error = future.result()
                     if run_time_error == 0:
-                        x_this_try = future_results[future]
-                        x_trys_not_timed_out.append(x_this_try)
+                        x_trys_not_timed_out.append(future_results[future])
+                        print(x_trys_not_timed_out)
                         y_trys.append(reward)
+                        x_this_try = x_trys_not_timed_out[-1]
                         try:
-                            if train_log:
-                                if log_path is None:
+                            if train_result:
+                                if result_path is None:
                                     raise ValueError("log_path is None")
                                 with file_lock:
-                                    with open(log_path, "a") as f:
-                                        x_this_try.append(reward)
+                                    with open(result_path, "a") as f:
                                         text = ''
                                         for r in x_this_try:
                                             text += str(r) + ' '
+                                        text += str(reward)
                                         f.write(text + '\n')
                         except Exception as e:
                             print(e)
+                    else:
+                        print(f'run_time_error code is {run_time_error}')
                 res.tell(x_trys_not_timed_out, y_trys, fit=True)
-                for x_try in x_trys:
+                for x_try in x_trys_not_timed_out:
                     x.append(x_try)
                 for y_try in y_trys:
                     y.append(y_try)
@@ -224,6 +230,7 @@ class BayesOptimizer():
         while running:
             if run_time_cnt >= self.run_time_count:
                 run_time_error = 1
+                print('run time error')
                 break
             running_list = [os.path.isfile(case_file_name)
                             for case_file_name in case_file_names]
@@ -232,7 +239,10 @@ class BayesOptimizer():
                 print('sleeping')
             sleep(self.sleep_T)
             run_time_cnt += 1
-        reward = self.func(case, self.file_name, self.tag)
+        if run_time_error == 0:
+            reward = self.func(case, self.file_name, self.tag)
+        else:
+            reward = 100000
         return reward, run_time_error
 
 
