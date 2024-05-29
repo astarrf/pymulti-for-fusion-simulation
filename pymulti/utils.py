@@ -20,6 +20,29 @@ class Multi_Program(Enum):
     multi_3d = "multi_3d"
 
 
+# 保存原始的print函数，以便稍后调用它。
+rewrite_print = print
+
+# 定义新的print函数。
+
+
+def print(*arg):
+    # 首先，调用原始的print函数将内容打印到控制台。
+    rewrite_print(*arg)
+
+    # 如果日志文件所在的目录不存在，则创建一个目录。
+    output_dir = "log_file"
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    # 打开（或创建）日志文件并将内容写入其中。
+    log_name = 'log.txt'
+    filename = os.path.join(output_dir, log_name)
+    with open(filename, "a") as f:
+        f.write(str(arg) + "\n")
+    # rewrite_print(*arg, file=open(filename, "a"))
+
+
 def init_one(program: str, program_path: str = None):
     if program_path is None:
         program_path = '/lustre/home/acct-phydci/phydci-user0/2023ConeAngle'
@@ -114,7 +137,7 @@ def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, c
     # 创建并提交任务
     with ThreadPoolExecutor(max_workers=n_jobs) as executor:
         # 创建case并获取参数
-        futures = {executor.submit(process_case, file): file for file in my_files}
+        futures = {executor.submit(process_case, file)                   : file for file in my_files}
 
         # 收集case和参数
         cases = []
