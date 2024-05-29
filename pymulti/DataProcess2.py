@@ -1,7 +1,7 @@
 from .CaseIO import Cases
 import scipy.interpolate
 import numpy as np
-from .utils import Multi_Program
+from .utils import Multi_Program, print
 import matplotlib.pyplot as plt
 
 # 全局变量
