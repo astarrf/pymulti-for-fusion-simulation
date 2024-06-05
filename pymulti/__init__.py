@@ -1,5 +1,5 @@
-from .CaseIO import Cases
-from .utils import Multi_Program, init, findAllCases, getAllReward
+from .CaseIO import Cases, getAllReward
+from .utils import Multi_Program, init, findAllCases
 from .Optimizer import BayesOptimizer, Traverser
 from .DataProcess import judge_func_depo, judge_func_T
 

@@ -4,12 +4,10 @@ Multi-1D/Multi-2D/Multi-3D automaic control.
 本库仅用于学术交流，不得用于商业用途。
 """
 
-import threading
+
 import os
 import re
 from enum import Enum
-from .CaseIO import Cases
-from concurrent.futures import ThreadPoolExecutor, as_completed
 
 VERSION = '0.1.0'
 
@@ -91,81 +89,3 @@ def findAllCases(path: str, rule: str = None) -> list:
             my_files.append(file)
     print(f'number of files found: {len(my_files)}')
     return my_files
-
-
-def getAllReward(judge_func, CaseDir: str, source_path: str, output_path: str, cases_path: str, rule: str = None, n_jobs: int = 5) -> list:
-    '''
-    获取所有文件的reward
-    judge_func: 
-        function类型，指定评价函数
-    CaseDir:
-        str类型，指定case路径
-    source_path:
-        str类型，指定source路径
-    output_path:
-        str类型，指定输出文件路径
-    cases_path:
-        str类型，指定cases路径
-    rule:
-        str类型，指定查找规则
-    n_jobs:
-        int类型，指定并行任务数
-    '''
-    my_files = findAllCases(cases_path, rule)
-    # 初始化变量
-    rwd = []
-    cnt = 1
-    file_lock = threading.Lock()
-
-    tot = len(my_files)
-    print(tot)
-
-    # 定义处理函数
-
-    def process_case(file) -> Cases:
-        my_case = Cases(Multi_Program.multi_3d,
-                        CaseDir=CaseDir,
-                        source_path=source_path,
-                        target_path=f'/{file}',
-                        replace_list=None)
-        return my_case
-
-    def judge_case(case: Cases, index):
-        print(f'start:{index}')
-        return judge_func(case), case.file_path
-
-    # 创建并提交任务
-    with ThreadPoolExecutor(max_workers=n_jobs) as executor:
-        # 创建case并获取参数
-        futures = {executor.submit(process_case, file)                   : file for file in my_files}
-
-        # 收集case和参数
-        cases = []
-        for future in as_completed(futures):
-            try:
-                my_case = future.result()
-                cases.append(my_case)
-                print(f'{cnt}/{tot}', my_case.file_path)
-            except Exception as e:
-                raise Exception(
-                    f"Error processing file {futures[future]}: {e}")
-            cnt += 1
-
-        # 创建并提交judge任务
-        judge_futures = {executor.submit(
-            judge_case, case, index): case for index, case in enumerate(cases)}
-
-        # 收集judge结果并写入文件
-        for future in as_completed(judge_futures):
-            try:
-                reward, file = future.result()
-                rwd.append(reward)
-                with file_lock:
-                    with open(output_path, "a") as f:
-                        f.write(f'{file} {reward}\n')
-            except Exception as e:
-                raise Exception(
-                    f"Error judging case {judge_futures[future]}: {e}")
-
-    print("Processing complete.")
-    return rwd
